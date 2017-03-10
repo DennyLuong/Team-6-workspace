@@ -10,7 +10,7 @@
 #include "driverlib/interrupt.h"
 
 
-int main(void) {
+void main(void) {
     SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
@@ -40,5 +40,4 @@ int main(void) {
         }
     }
 
-	return 0;
 }
