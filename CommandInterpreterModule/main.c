@@ -13,69 +13,90 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
 
-struct DataFrame{
-    uint8_t Start;
-    uint8_t Function;
-    uint8_t Data;
-    uint8_t CheckSum;
-    uint8_t CR;
-    uint8_t LF;
-};
-
 typedef enum {
     HH = 0,
-    P1 = 3,
-    P0 = 6,
-    RF = 9,
-    RR = 12,
-    LF = 15,
-    LR = 18,
-    LG = 21,
-    GO = 24,
-    R0 = 27,
-    R1 = 30,
-    TD = 33,
-    DS = 36,
-    ES = 39,
-    DC = 42
+    P1 = 4,
+    P0 = 8,
+    RF = 12,
+    RR = 16,
+    LF = 20,
+    LR = 24,
+    LG = 28,
+    GO = 32,
+    R0 = 36,
+    R1 = 40,
+    TD = 44,
+    DS = 48,
+    ES = 52,
+    DC = 56,
+    ER = 60
 }Commands;
 
-static const char LookupTable[] = {
-    HH,0,0,
-    P1,1,1,
-    P0,1,0,
-    RF,1,1,
-    RR,1,0,
-    LF,1,1,
-    LG,1,0,
-    GO,1,1,
-    R0,1,0,
-    R1,1,1,
-    TD,1,0,
-    DS,1,1,
-    ES,1,0,
-    DC,1,1,
-};
+
 
 uint8_t CharacterCount = 0;
 
-//struct Dataframe responseGet(uint32_t chars[]){
-//    struct DataFrame response;
-//    uint8_t index = (chars[0] == 'H' && chars[1] == 'H')? HH :
-//                    (chars[0] == 'P' && chars[1] == '1')? P1 :
-//                    (chars[0] == 'P' && chars[1] == '0')? HH :
-//                    (chars[0] == 'R' && chars[1] == 'F')? P1 :
-//                    (chars[0] == 'R' && chars[1] == 'R')? HH :
-//                    (chars[0] == 'L' && chars[1] == 'F')? P1 : DC;
-//    response.Start = 0x3A;
-//    response.Function = LookupTable[index];
-//    response.Data = LookupTable[index+1];
-//    response.CheckSum = LookupTable[index+2];
-//    response.CR = 0x0D;
-//    response.LF = 0x0A;
-//
-//    return response;
-//}
+void responseGet(uint32_t chars[], char &function){
+    const char LookupTable[] = {
+        'H','H','1','0',
+        'P','1','1','1',
+        'P','0','1','0',
+        'R','F','1','1',
+        'R','R','1','0',
+        'L','F','1','1',
+        'L','R','1','1',
+        'L','G','1','0',
+        'G','O','1','1',
+        'R','0','1','0',
+        'R','1','1','1',
+        'T','D','1','0',
+        'D','S','1','1',
+        'E','S','1','0',
+        'D','C','1','1',
+        'E','R','0','0',
+    };
+
+    char index = 0;
+    if(chars[0] == 'H' && chars[1] == 'H')
+        index = HH;
+    else if(chars[0] == 'P' && chars[1] == '1')
+        index = P1;
+    else if(chars[0] == 'P' && chars[1] == '0')
+            index = P0;
+    else if(chars[0] == 'R' && chars[1] == 'F')
+            index = RF;
+    else if(chars[0] == 'R' && chars[1] == 'R')
+            index = RR;
+    else if(chars[0] == 'L' && chars[1] == 'F')
+            index = LF;
+    else if(chars[0] == 'L' && chars[1] == 'R')
+            index = LR;
+    else if(chars[0] == 'G' && chars[1] == 'O')
+            index = GO;
+    else if(chars[0] == 'R' && chars[1] == '0')
+            index = R0;
+    else if(chars[0] == 'R' && chars[1] == '1')
+            index = R1;
+    else if(chars[0] == 'T' && chars[1] == 'D')
+            index = TD;
+    else if(chars[0] == 'D' && chars[1] == 'S')
+            index = DS;
+    else if(chars[0] == 'E' && chars[1] == 'S')
+            index = ES;
+    else if(chars[0] == 'D' && chars[1] == 'C')
+            index = DC;
+    else
+        index = ER;
+
+    function = index;
+    char i = 0;
+    UARTCharPut(UART0_BASE, 0x3A);
+    for(i=0; i < 4; i++){
+        UARTCharPut(UART0_BASE, LookupTable[index+i]);
+    }
+    UARTCharPut(UART0_BASE, 0x0D);
+    UARTCharPut(UART0_BASE, 0x0A);
+}
 
 
 
@@ -84,8 +105,7 @@ void UARTIntHandler(void)
     uint32_t ui32Status;
     uint32_t character;
     uint32_t characters[2];
-
-    struct DataFrame responseData;
+    char function=0;
 
     ui32Status = UARTIntStatus(UART0_BASE, true); //get interrupt status
     UARTIntClear(UART0_BASE, ui32Status); //clear the asserted interrupts
@@ -98,23 +118,27 @@ void UARTIntHandler(void)
          //turn off LED
         characters[CharacterCount] = character;
         CharacterCount++;
-        UARTCharPut(UART0_BASE, characters[0]);
         if(CharacterCount == 2){
             CharacterCount =0;
             UARTCharPut(UART0_BASE, '\r');
             UARTCharPut(UART0_BASE, '\n');
-//            responseData = responseGet(characters);
-//            UARTCharPut(UART0_BASE, responseData.Start);
-//            UARTCharPut(UART0_BASE, responseData.Function);
-//            UARTCharPut(UART0_BASE, responseData.Data);
-//            UARTCharPut(UART0_BASE, responseData.CheckSum);
-//            UARTCharPut(UART0_BASE, responseData.CR);
-//            UARTCharPut(UART0_BASE, responseData.LF);//
+            responseGet(characters, function);
+            getFunction(function);
         }
 
         SysCtlDelay(SysCtlClockGet() / (1000 * 3)); //delay ~1 msec
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
     }
+}
+
+void getFunction(char function){
+    if(function == R0)
+        frontDistance();
+
+}
+
+void frontDistance(void){
+
 }
 
 int main(void) {
