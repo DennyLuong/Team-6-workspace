@@ -11,11 +11,15 @@
 
 void UARTinit(void);
 void ADCinit(void);
+void delay(void);
 
 int main(void) {
 	uint32_t ui32ADC0Value[4];
 	volatile uint32_t ui32DistAvg;
-
+	volatile uint32_t ui32temp;
+	uint8_t ui8outChar[5];
+	int i = 0;
+	int decimalNum = 0;
 	// Sets clock
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 	UARTinit();		//UART Initialize
@@ -29,7 +33,7 @@ int main(void) {
     {
     	ADCIntClear(ADC0_BASE, 1);
     	ADCProcessorTrigger(ADC0_BASE, 1);
-    	UARTStdioConfig(UART0_BASE, 115200, SysCtlClockGet());
+    	//UARTStdioConfig(UART0_BASE, 115200, SysCtlClockGet());
 
     	while(!ADCIntStatus(ADC0_BASE, 1, false))
     	{
@@ -52,6 +56,30 @@ int main(void) {
         UARTCharPut(UART0_BASE, ':');
         UARTCharPut(UART0_BASE, ' ');
 
+        ui32temp = ui32DistAvg;
+        decimalNum = 0;
+        for (i = 0; ui32temp >= 1; i++) {
+        	ui32temp = ui32temp/10;
+        	decimalNum++;
+        }
+        ui8outChar[0] = 'a';
+        ui8outChar[1] = ' ';
+        ui8outChar[2] = ' ';
+        ui8outChar[3] = ' ';
+        ui8outChar[4] = ' ';
+
+        for (i = decimalNum - 1; i >= 0; i--) {
+        	ui8outChar[i] = (char)48 + (ui32DistAvg % 10);
+        	ui32DistAvg /= 10;
+        }
+        for (i = 0; i < decimalNum; i++) {
+        	UARTCharPut(UART0_BASE, ui8outChar[i]);
+        }
+
+        UARTCharPut(UART0_BASE, '\r');
+        UARTCharPut(UART0_BASE, '\n');
+
+        delay();
 /*
     	UARTCharPut(UART0_BASE, ui32DistAvg));
     	UARTprintf(ui32DistAvg);
@@ -96,3 +124,8 @@ void ADCinit(void) {
 
 }
 
+void delay(void)
+{
+	 SysCtlDelay(6700000);		// creates ~500ms delay - TivaWare fxn
+
+}
