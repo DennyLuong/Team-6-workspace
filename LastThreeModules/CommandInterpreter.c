@@ -1,7 +1,24 @@
 #include "CommandInterpreter.h"
+#include "DistanceSensor.h"
+
 
 typedef enum{
-    HH,P1,P0,RF,RR,LF,LR,LG,GO,R0,R1,TD,DS,ES,DC,ER
+    HH=0, 
+    P1=2, 
+    P0=4, 
+    RF=6,
+    RR=8,
+    LF=10,
+    LR=12,
+    LG=14,
+    GO=16,
+    R0=18,
+    R1=20,
+    TD=22,
+    DS=24,
+    ES=26,
+    DC=28,
+    ER=30
 }Commands; 
 
 char CI_get_response(char command){
@@ -25,8 +42,12 @@ char CI_get_response(char command){
     }
 
     //
-
-    //
+    // print start 0x3A
+    LookupTable[command]; 
+    LookupTable[command+1];
+    // print check sum --
+    // print 0x0D
+    // print 0x0A
 
     return (char) command; 
 }
@@ -85,8 +106,10 @@ void CI_call_function(char command){
 		case GO:
 			break;
 		case R0:
+			get_distance(0); 
 			break;
 		case R1:
+			get_distance(1); 
 			break;
 		case TD:
 			break;

@@ -43,12 +43,27 @@ void ADCInit(void){
     ADCSequenceEnable(ADC0_BASE, 1);
 }
 
+char commandCharCount = 0; 
 void UARTIntHandler(void){
 	volatile uint32_t status = UARTInitStatus(UART1_BASE, true);  
-	volatile uint32_t character; 
-	uint32_t * characters[2]; 
+	volatile uint32_t commandChar; 
+	uint32_t * commandChars[2]; 
+	char command; 
 
 	UARTInitClear(UART1_BASE);
+	while(UARTCharsAvail(UART1_BASE)){
+		commandChar = UARTCharGetNonBlocking(UART1_BASE);
+		UARTCharPutNonBlocking(UART1_BASE, commandChar); 
+		commandChars[commandCharCount++] = commandChar; 
+		if(commandCharCount == 2){
+			commandCharCount = 0;
+			command = CI_set_command(commandChars); 
+			CI_get_response(command); 
+			CI_call_function(command); 
+
+		}
+	SysCtlDelay(SysCtlClockGet() / (1000 * 3));	
+	}
 }
 
 int main(void) {
