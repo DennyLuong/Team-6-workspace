@@ -11,8 +11,8 @@
 #include "driverlib/pin_map.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
+#include "driverlib/adc.h"
 #include "CommandInterpreter.h"
-
 void UArtInit(void){
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);

@@ -39,12 +39,12 @@ char CI_get_response(char command){
 	    "ES", "Emergency Stop",
 	    "DC", "Drive Clock Start",
     	"ER", "Error"
-    }
+    };
 
     //
     // print start 0x3A
-    LookupTable[command]; 
-    LookupTable[command+1];
+   // LookupTable[command];
+ //   LookupTable[command+1];
     // print check sum --
     // print 0x0D
     // print 0x0A

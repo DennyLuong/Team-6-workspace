@@ -1,4 +1,6 @@
+
 #include "driverlib/adc.h"
+#include "DistanceSensor.h"
 
 uint32_t get_distance(char command){
 	uint32_t ADC_value[4]; 
