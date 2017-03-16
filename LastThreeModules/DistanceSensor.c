@@ -6,11 +6,11 @@ uint32_t get_distance(char command){
 	volatile uint32_t temp; 
 	volatile char decimal_count=0; 
 	uint8_t distance[5]; 
-
+	uint64_t ADC; 
 	if(!command)
-		#define ADC = 0x40038000
+		ADC = 0x40038000; // front side sensor 
 	else 
-		#define ADC = 0x40039000
+		ADC = 0x40039000; // right side sensor 
 
 	ADCIntClear(ADC, 1);
     ADCProcessorTrigger(ADC0_BASE, 1);
