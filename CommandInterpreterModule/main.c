@@ -17,23 +17,23 @@
 #define UART_BUFFERED 1
 
 
-typedef enum {
-    HH = 0,
-    P1 = 4,
-    P0 = 8,
-    RF = 12,
-    RR = 16,
-    LF = 20,
-    LR = 24,
-    LG = 28,
-    GO = 32,
-    R0 = 36,
-    R1 = 40,
-    TD = 44,
-    DS = 48,
-    ES = 52,
-    DC = 56,
-    ER = 60
+typedef enum{
+    HH=0,
+    P1=2,
+    P0=4,
+    RF=6,
+    RR=8,
+    LF=10,
+    LR=12,
+    LG=14,
+    GO=16,
+    R0=18,
+    R1=20,
+    TD=22,
+    DS=24,
+    ES=26,
+    DC=28,
+    ER=30
 }Commands;
 
 
@@ -41,24 +41,24 @@ typedef enum {
 uint8_t CharacterCount = 0;
 
 char responseGet(uint32_t chars[]){
-    const char LookupTable[] = {
-        'H','H','1','0',
-        'P','1','1','1',
-        'P','0','1','0',
-        'R','F','1','1',
-        'R','R','1','0',
-        'L','F','1','1',
-        'L','R','1','1',
-        'L','G','1','0',
-        'G','O','1','1',
-        'R','0','1','0',
-        'R','1','1','1',
-        'T','D','1','0',
-        'D','S','1','1',
-        'E','S','1','0',
-        'D','C','1','1',
-        'E','R','0','0',
-    };
+    static const char * LookupTable[] = {
+            "HH", " Enter 2char function      ",
+            "P1", " PWM enable                ",
+            "P0", " PWM disable               ",
+            "RF", " Right Wheel Forward       ",
+            "RR", " Right Wheel Reverse       ",
+            "LF", " Left Wheel Forward        ",
+            "LR", " Left Wheel Reverse        ",
+            "LG", " Light Get                 ",
+            "GO", " PID initiated             ",
+            "R0", " Read Front Distance Sensor",
+            "R1", " Read Right Distance Sensor",
+            "TD", " Toggle Data Acquisition   ",
+            "DS", " Post Drive Semaphore      ",
+            "ES", " Emergency Stop            ",
+            "DC", " Drive Clock Start         ",
+            "ER", " Error                     "
+        };
 
     char index = 0;
     if(chars[0] == 'H' && chars[1] == 'H')
@@ -91,11 +91,13 @@ char responseGet(uint32_t chars[]){
             index = DC;
     else
         index = ER;
-    char i = 0;
+
     UARTCharPut(UART0_BASE, 0x3A);
-    for(i=0; i < 4; i++){
-        UARTCharPut(UART0_BASE, LookupTable[index+i]);
-    }
+    UARTCharPut(UART0_BASE, 0x20);
+    print(LookupTable[index], 2);
+    UARTCharPut(UART0_BASE, 0x20);
+    print(LookupTable[index+1], 27);
+    UARTCharPut(UART0_BASE, 0x20);
     UARTCharPut(UART0_BASE, 0x0D);
     UARTCharPut(UART0_BASE, 0x0A);
     return index;
@@ -250,7 +252,7 @@ int main(void) {
     //UARTStdioConfig(0,115200, SysCtlClockGet());
    // UARTprintf("Enter Command\n");
 
-    print("12345", 5);
+    print("Enter Command:", 14);
 
     while (1)
         ;
