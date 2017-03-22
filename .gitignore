@@ -7,3 +7,5 @@
 *.launches
 *.settings
 Debug/
+.settings/
+.launches/
