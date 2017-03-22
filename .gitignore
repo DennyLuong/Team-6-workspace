@@ -1,0 +1,9 @@
+#ignoring the following files
+*.project
+*.cproject
+*.ccproject
+*.metadata
+*.jxbrowser-data
+*.launches
+*.settings
+Debug/
