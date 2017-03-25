@@ -99,7 +99,7 @@ char responseGet(char chars[]){
 
 	//UARTCharPut(UART1_BASE, 0x3A); // :
 	//UARTCharPut(UART1_BASE, 0x20); // space
-	UARTprintf(": ");
+	UARTprintf("\n");
 	UARTprintf(LookupTable[index]);
 
 	UARTCharPut(UART1_BASE, 0x20); 	// space
@@ -160,9 +160,9 @@ void PWMSpeed(void){
 	char inSpeed[4];
 	int speedAdjust;
 
-	UARTprintf("Enter Speed(1-100):");
+	UARTprintf("Enter Speed(1-100): ");
 
-	UARTgets(inSpeed,strlen(inSpeed) + 1);
+	UARTgets(inSpeed,5);
 
 	speedAdjust = atoi(inSpeed);		//conversion from ASCII to INT
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speedAdjust * ui32Load/100);
@@ -188,37 +188,39 @@ void getFunction(char function){
 
 }
 
-/*
+
 void UARTIntHandler(void)
 {
+	char characters[2] = " ";
+	char function = 0;
+
+	uint32_t ui32Status;
+
+	ui32Status = UARTIntStatus(UART1_BASE, true); //get interrupt status
+
+	UARTIntClear(UART1_BASE, ui32Status); //clear the asserted interrupts
+
+	//GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2); //blink LED
+	UARTgets(characters, 3);
+	//SysCtlDelay(SysCtlClockGet() / (1000 * 3)); //delay ~1 msec
+	UARTprintf("\n");
+	//GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
+
+	function = responseGet(characters);
+	getFunction(function);
+	UARTprintf("Enter Command: ");
 
 
-	while(UARTCharsAvail(UART1_BASE)) //loop while there are chars
-	{
-		character = UARTCharGetNonBlocking(UART1_BASE);
-		UARTCharPutNonBlocking(UART1_BASE, character); //echo character
-		GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2); //blink LED
-		//turn off LED
-		characters[CharacterCount] = character;
-		CharacterCount++;
-		if(CharacterCount == 2){
-			CharacterCount = 0;
-			UARTCharPut(UART1_BASE, '\r');
-			UARTCharPut(UART1_BASE, '\n');
-			function = responseGet(characters);
-			getFunction(function);
-			//print("Enter Command:", 14);
-			UARTprintf("Enter Command: ");
-
-		}
-			SysCtlDelay(SysCtlClockGet() / (1000 * 3)); //delay ~1 msec
-	}
 
 
 
 }
 
-*/
+
+
+
+
+
 
 
 
@@ -233,7 +235,7 @@ void UARTInit(void){
 	// set clock and standard I/O
 	UARTClockSourceSet(UART1_BASE, UART_CLOCK_PIOSC);
 	UARTStdioConfig(1, 115200, 16000000);
-	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
+	//UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
 
 	//UARTConfigSetExpClk(UART0_BASE, SysCtlClockGet(), 115200,(UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
 }
@@ -288,32 +290,33 @@ void PWMInit(void)
 
 
 int main(void) {
-
+	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ); // System clock 40MHz
 	UARTInit();
-	ADCInit();
+	//ADCInit();
 	PWMInit();
 
-	IntMasterEnable();
-	IntEnable(INT_UART1);
+	IntMasterEnable(); 	// Enable processor interrupts
+	IntEnable(INT_UART1);	// Enable the UART interrupt
+	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT); //only enable RX and TX interrupts
 
 	UARTprintf("Embedded Systems - TEAM 6 \r\n");
-	UARTprintf("Enter Command:");
-	//print("Embedded Systems - TEAM 6 \r\n",29);
-	//print("Enter Command:", 14);
+	UARTprintf("Enter Command: ");
+
 
 	while (1)
 	{
-		uint32_t ui32Status;
+		/*//uint32_t ui32Status;
 		//uint32_t character;
-		char characters[3];
+		char characters[2] = " ";
 		char function = 0;
 
 
-		UARTgets(characters, strlen(characters) + 1);
-		UARTprintf(characters);
+		UARTgets(characters, 3);
+		//UARTprintf(characters);
 		UARTprintf("\n");
 
-		ui32Status = UARTIntStatus(UART1_BASE, true); //get interrupt status
+
+		//ui32Status = UARTIntStatus(UART1_BASE, true); //get interrupt status
 
 		GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2); //blink LED
 		function = responseGet(characters);
@@ -323,6 +326,7 @@ int main(void) {
 
 		SysCtlDelay(SysCtlClockGet() / (1000 * 3)); //delay ~1 msec
 		GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
-		UARTIntClear(UART1_BASE, ui32Status); //clear the asserted interrupts
+		//UARTIntClear(UART1_BASE, ui32Status); //clear the asserted interrupts
+	*/
 	}
 }
