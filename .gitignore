@@ -7,7 +7,4 @@ Debug/
 \.config
 \.launches
 .xdchelp
-\RemoteSystemsTempFiles
-\dvt
-RemoteSystemsTempFiles/
-dvt/
+
