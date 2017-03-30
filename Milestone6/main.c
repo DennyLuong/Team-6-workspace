@@ -175,24 +175,20 @@ void PWMSpeed(void){
 
 	speedAdjust = atoi(inSpeed);
 
-	ui8Adjust = speedAdjust * ui32Load/100;
-
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
+	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speedAdjust * ui32Load/100);
+	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speedAdjust * ui32Load/100);
 }
 
 void PWMRightReverse(void){
 	ui8Adjust = ui32Load;
 	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 4);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 12);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
 }
 
 void PWMLeftReverse(void){
 	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 4);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 12);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 8);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
 }
@@ -204,19 +200,21 @@ void setSpeed(unsigned int adjust) {
 }
 
 void rotateCW(int diff) {
-	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 4);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 12);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
+
+	unsigned int speed = diff * ui32Load/100;
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 0);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 4);
+	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speed);
+	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speed);
 }
 
 void rotateCCW(int diff) {
-	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 4);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 12);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
+
+	unsigned int speed = diff * ui32Load/100;
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 0);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 8);
+	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speed);
+	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speed);
 }
 
 /**************************************
@@ -233,21 +231,21 @@ void PIDStart(void) {
 }
 
 uint32_t cur_pos;
-const uint32_t targetDist = 1000;
+const uint32_t target_dist = 1000;
 int proportional;
 int last_proportional = 0;
 int derivative;
 int integral = 0;
-const int p_const = 20;
+const float p_const = 20;
 const int i_const = 10000;
 float d_const = 1.5;
-const int max = 60;
+const int max = 100;
 
 void computePID(void){
 
 	// PID calculations
 	cur_pos = rightDistance();
-	proportional = cur_pos - targetDist;
+	proportional = cur_pos - target_dist;
 	//derivative = proportional - last_proportional;
 	//integral += proportional;
 	//last_proportional = proportional;
@@ -264,8 +262,11 @@ void computePID(void){
 	if (power_difference < 0) {
 		rotateCW(power_difference);
 	}
-	else {
+	else if (power_difference > 80) {
 		rotateCCW(power_difference);
+	}
+	else {
+		PWMForward();
 	}
 
 }
