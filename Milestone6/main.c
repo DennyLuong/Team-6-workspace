@@ -31,118 +31,6 @@
 
 #define PWM_FREQUENCY 55
 
-typedef enum{
-	HH=0,
-	MS=2,
-	P0=4,
-	MF=6,
-	RR=8,
-	SS=10,
-	LR=12,
-	LG=14,
-	GO=16,
-	R0=18,
-	R1=20,
-	TD=22,
-	DS=24,
-	ES=26,
-	DC=28,
-	ER=30
-}Commands;
-
-
-
-uint8_t CharacterCount = 0;
-
-char responseGet(char chars[]){
-	static const char * LookupTable[] = {
-			"HH", " Enter 2char function      ",
-			"MS", " PWM enable                ",
-			"P0", " PWM disable               ",
-			"MF", " Moving Forward            ",
-			"RR", " Right Wheel Reverse       ",
-			"SS", " Set Speed                 ",
-			"LR", " Left Wheel Reverse        ",
-			"LG", " Light Get                 ",
-			"GO", " PID initiated             ",
-			"R0", " Read Front Distance Sensor",
-			"R1", " Read Right Distance Sensor",
-			"TD", " Toggle Data Acquisition   ",
-			"DS", " Post Drive Semaphore      ",
-			"ES", " Emergency Stop            ",
-			"DC", " Drive Clock Start         ",
-			"ER", " Error                     "
-	};
-
-	char index = 0;
-	if(!strcmp(chars,"HH"))
-		index = HH;
-	else if(!strcmp(chars,"MS"))
-		index = MS;
-	else if(!strcmp(chars,"P0"))
-		index = P0;
-	else if(!strcmp(chars,"MF"))
-		index = MF;
-	else if(!strcmp(chars,"RR"))
-		index = RR;
-	else if(!strcmp(chars,"SS"))
-		index = SS;
-	else if(!strcmp(chars,"LR"))
-		index = LR;
-	else if(!strcmp(chars,"GO"))
-		index = GO;
-	else if(!strcmp(chars,"R0"))
-		index = R0;
-	else if(!strcmp(chars,"R1"))
-		index = R1;
-	else if(!strcmp(chars,"TD"))
-		index = TD;
-	else if(!strcmp(chars,"DS"))
-		index = DS;
-	else if(!strcmp(chars,"ES"))
-		index = ES;
-	else if(!strcmp(chars,"DC"))
-		index = DC;
-	else
-		index = ER;
-
-	UARTprintf("\n");
-	UARTprintf(LookupTable[index]);
-
-	UARTCharPut(UART1_BASE, 0x20); 	// space
-
-	UARTprintf(LookupTable[index + 1]);
-	UARTCharPut(UART1_BASE, 0x20);	// space
-	UARTCharPut(UART1_BASE, 0x0D);	// ??
-	UARTCharPut(UART1_BASE, 0x0A);	// ??
-
-	return index;
-}
-
-/**************************************
- *     	    Command Functions         *
- **************************************/
-
-uint32_t rightDistance(void){
-	uint32_t ui32ADC0Value[4];
-	volatile uint32_t ui32DistAvg;
-
-	// clear interrupt
-	ADCIntClear(ADC0_BASE, 1);
-	// trigger ADC conversion
-	ADCProcessorTrigger(ADC0_BASE, 1);
-	// wait for conversion to complete
-	while(!ADCIntStatus(ADC0_BASE, 1, false))
-	{
-	}
-	ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
-	ui32DistAvg = ui32ADC0Value[0];
-
-//	UARTprintf("Distance: ");
-//	UARTprintf("%u \n",ui32DistAvg);
-
-	return ui32DistAvg;
-}
 
 
 unsigned int ui32Load = 0;
@@ -179,7 +67,7 @@ void PWMSpeed(void){
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speedAdjust * ui32Load/100);
 }
 
-void PWMRightReverse(void){
+void PWMRightReverse(void){  //
 	ui8Adjust = ui32Load;
 	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 4);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
@@ -262,77 +150,16 @@ void computePID(void){
 	if (power_difference < 0) {
 		rotateCW(power_difference);
 	}
-	else if (power_difference > 80) {
+	else {
 		rotateCCW(power_difference);
 	}
-	else {
-		PWMForward();
-	}
+//	else {
+//		PWMForward();
+//	}
 
 }
 
-/**************************************
- *     	    Command Functions         *
- **************************************/
 
-/*
- *  getFunction
- *  - Main command selector
- */
-void getFunction(char function){
-	switch (function) {
-	case R1:
-		rightDistance();
-		break;
-	case MF:
-		PWMForward();
-		break;
-	case RR:
-		PWMRightReverse();
-		break;
-	case LR:
-		PWMLeftReverse();
-		break;
-	case ES:
-		PWMStop();
-		break;
-	case SS:
-		PWMSpeed();
-		break;
-	case MS:
-		PWMStart();
-		break;
-	case GO:
-		PIDStart();
-		break;
-	default:
-		UARTprintf("Error \n");
-		break;
-	}
-
-}
-
-/*
- * UART Interrupt Handler
- */
-void UARTIntHandler(void)
-{
-	char characters[2] = " ";
-	char function = 0;
-
-	uint32_t ui32Status;
-	//get interrupt status
-	ui32Status = UARTIntStatus(UART1_BASE, true);
-	//clear the asserted interrupts
-	UARTIntClear(UART1_BASE, ui32Status);
-	UARTgets(characters, 3);
-	UARTprintf("\n");
-
-	function = responseGet(characters);
-	getFunction(function);
-	UARTprintf("Enter Command: ");
-
-}
 
 /*
  * Timer0 Interrupt Handler
@@ -346,55 +173,269 @@ void Timer0IntHandler(void) {
 	computePID();
 
 }
+/********************************************************************************************************
+ *                                     ADC get_adc_value Functions                                      *
+ ********************************************************************************************************/
 
-/**************************************
- * Interface Initialization Functions *
- **************************************/
+uint32_t (*get_adc_value)(void);  // when working on the PID
+uint8_t rightDistance(void){
+    // step 0 - ADC_CTL_CH0
+    UARTprintf("value right distance:");
+    uint8_t value = ADC(0);
+    UARTprintf("%u \n", value);
+    return value;
+}
+uint8_t frontDistance(void){
+    // step 1 - ADC_CTL_CH1
+    UARTprintf("value front distance:");
+    uint8_t value = ADC(1);
+    UARTprintf("%u \n", value);
+    return value;
+}
+uint8_t rightReflection(void){
+    // step 2 - ADC_CTL_CH8
+    UARTprintf("value right flection:");
+    uint8_t value = ADC(2);
+    UARTprintf("%u \n", value);
+    return value;
+}
+
+uint8_t leftReflection(void){
+    // step 3 - ADC_CTL_CH9
+    UARTprintf("value left reflection:");
+    uint8_t value = ADC(3);
+    UARTprintf("%u \n", value);
+    return value;
+}
+
+uint8_t ADC(uint8_t value){
+    uint32_t ui32ADC0Value[4];
+    ADCIntClear(ADC0_BASE, 1);
+    ADCProcessorTrigger(ADC0_BASE, 1);
+    while(!ADCIntStatus(ADC0_BASE, 1, false)){
+    }// wait for conversion to complete
+    ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
+    return ui32ADC0Value[value];
+}
+/********************************************************************************************************
+ *                                     UART Handler and Command Functions                               *
+ ********************************************************************************************************/
+
+void UARTIntHandler(void)
+{
+    char characters[2] = " ";
+    char function = 0;
+    uint32_t ui32Status;
+    //get interrupt status
+    ui32Status = UARTIntStatus(UART1_BASE, true);
+    //clear the asserted interrupts
+    UARTIntClear(UART1_BASE, ui32Status);
+    UARTgets(characters, 3);
+    UARTprintf("\n");
+    function = responseGet(characters);
+    getFunction(function);
+    UARTprintf("Enter Command: ");
+}
+
+typedef enum{
+    HH=0,
+    MS=2,
+    P0=4,
+    MF=6,
+    RR=8,
+    SS=10,
+    LR=12,
+    LG=14,
+    GO=16,
+    R0=18,
+    R1=20,
+    TD=22,
+    DS=24,
+    ES=26,
+    DC=28,
+    ER=30
+}Commands;
+
+//typedef void(*function)(void);
+//struct commandStruct {
+//    char const *name;
+//    function execute;
+//    char const *response;
+//};
+//
+//const struct commandStruct commands[] = {
+//    {"help", &helpCommand, "Printing Help Statement... " },
+//    {"name2", &sayPoop, "poooooop"},
+//};
+//
+//commands[0].execute();
+
+//void helpCommand (void){
+//    static const helplisting[]= "\n";
+//}
+
+
+
+uint8_t CharacterCount = 0;
+
+char responseGet(char chars[]){
+    static const char * LookupTable[] = {
+            "HH", " Enter 2char function      ",
+            "MS", " PWM enable                ",
+            "P0", " PWM disable               ",
+            "MF", " Moving Forward            ",
+            "RR", " Right Wheel Reverse       ",
+            "SS", " Set Speed                 ",
+            "LR", " Left Wheel Reverse        ",
+            "LG", " Light Get                 ",
+            "GO", " PID initiated             ",
+            "R0", " Read Front Distance Sensor",
+            "R1", " Read Right Distance Sensor",
+            "TD", " Toggle Data Acquisition   ",
+            "DS", " Post Drive Semaphore      ",
+            "ES", " Emergency Stop            ",
+            "DC", " Drive Clock Start         ",
+            "ER", " Error                     "
+    };
+
+    char index = 0;
+    if(!strcmp(chars,"HH"))
+        index = HH;
+    else if(!strcmp(chars,"MS"))
+        index = MS;
+    else if(!strcmp(chars,"P0"))
+        index = P0;
+    else if(!strcmp(chars,"MF"))
+        index = MF;
+    else if(!strcmp(chars,"RR"))
+        index = RR;
+    else if(!strcmp(chars,"SS"))
+        index = SS;
+    else if(!strcmp(chars,"LR"))
+        index = LR;
+    else if(!strcmp(chars,"GO"))
+        index = GO;
+    else if(!strcmp(chars,"R0"))
+        index = R0;
+    else if(!strcmp(chars,"R1"))
+        index = R1;
+    else if(!strcmp(chars,"TD"))
+        index = TD;
+    else if(!strcmp(chars,"DS"))
+        index = DS;
+    else if(!strcmp(chars,"ES"))
+        index = ES;
+    else if(!strcmp(chars,"DC"))
+        index = DC;
+    else
+        index = ER;
+
+    UARTprintf("\n");
+    UARTprintf(LookupTable[index]);
+
+    UARTCharPut(UART1_BASE, 0x20);  // space
+
+    UARTprintf(LookupTable[index + 1]);
+    UARTCharPut(UART1_BASE, 0x20);  // space
+    UARTCharPut(UART1_BASE, 0x0D);  // ??
+    UARTCharPut(UART1_BASE, 0x0A);  // ??
+
+    return index;
+}
+
+void getFunction(char function){
+    switch (function) {
+    case R1:
+        rightDistance();
+        frontDistance();
+        rightReflection();
+        leftReflection();
+        break;
+    case MF:
+        PWMForward();   // its rotating clockwise
+        break;
+    case RR:                // nothing
+        PWMRightReverse();
+        break;
+    case LR:                // nothing
+        PWMLeftReverse();
+        break;
+    case ES:
+        PWMStop();
+        break;
+    case SS:                //w ork
+        PWMSpeed();
+        break;
+    case MS:
+        PWMStart();
+        break;
+    case GO:
+        PIDStart();
+        break;
+    default:
+        UARTprintf("Error \n");
+        break;
+    }
+}
+/********************************************************************************************************
+ *                                     Interface Initialization Functions                               *
+ ********************************************************************************************************/
 
 void UARTInit(void){
+    // UART Module 1
+    // Port PB0 RX
+    // Port PB1 TX
 
-	// enable UART & GPIO peripherals
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
 	// configuration of GPIO pins and types
 	GPIOPinConfigure(GPIO_PB0_U1RX);
-	GPIOPinConfigure(GPIO_PB1_U1TX);
+    GPIOPinConfigure(GPIO_PB1_U1TX);
 	GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 	// set clock and standard I/O
 	UARTClockSourceSet(UART1_BASE, UART_CLOCK_PIOSC);
 	UARTStdioConfig(1, 115200, 16000000);
-
+	// Interrupt Enabled for Data on TX and RX
+	IntEnable(INT_UART1);
+	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
 }
 
 void ADCInit(void) {
+    //  Port PE3 AIN-0 - ADC_CTL_CH0 - RIGHT DISTANCE SENSOR
+    //  Port PE2 AIN-1 - ADC_CTL_CH1 - FRONT DISTANCE SENSOR
+    //  Port PE5 AIN-8 - ADC_CTL_CH8 - RIGHT LIGHT SENSOR
+    //  Port PE4 AIN-9 - ADC_CTL_CH9 - LEFT LIGHT SENSOR
 
-	// enable ADC0 and GPIOE Pin 2
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-	GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_2);
+	GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2 | GPIO_PIN_5 | GPIO_PIN_4);
 
-	// set sequence and configure steps
 	ADCSequenceConfigure(ADC0_BASE, 1, ADC_TRIGGER_PROCESSOR, 0);
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH1 | ADC_CTL_IE | ADC_CTL_END);
+
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH0 );
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 1, ADC_CTL_CH1 );
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH8 );
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 3, ADC_CTL_CH9  | ADC_CTL_END |ADC_CTL_IE);
 	ADCSequenceEnable(ADC0_BASE, 1);
 }
 
 void PWMInit(void)
 {
+    //  Port PE1 - MODE = 1
+    //  Port PD3 - PHASE PIN - RIGHT MOTOR
+    //  Port PD1 - PWM PIN   - RIGHT MOTOR
+    //  Port PD2 - PHASE PIN - LEFT MOTOR
+    //  Port PD0 - PWM PIN   - LEFT MOTOR
+    // FORWARD 0 BITMASKED
+    // REVERSE 1 BITMASKED
 
 	SysCtlPWMClockSet(SYSCTL_PWMDIV_64);
-	// enable PWM1, GPIOD and GPIOE
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM1);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-	// assign PWM type to GPIO Pins
-	// D0: right motor		D2: right phase
-	// D1: left motor		D3: left phase
-	// E1: mode
-	GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_0);
-	GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_1);
-	GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE,GPIO_PIN_2);
-	GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE,GPIO_PIN_3);
+
+	GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+	GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE,GPIO_PIN_2 | GPIO_PIN_3);
 	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE,GPIO_PIN_1);
 	GPIOPinConfigure(GPIO_PD0_M1PWM0);
 	GPIOPinConfigure(GPIO_PD1_M1PWM1);
@@ -405,7 +446,7 @@ void PWMInit(void)
 	PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, ui32Load);
 
 	// enable mode = 1
-	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_1, 2);
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_1, GPIO_PIN_1);
 
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, 1);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, 1);
@@ -428,32 +469,24 @@ void TimerInit(void) {
 	IntEnable(INT_TIMER0A);
 	// enable specific vector within timer to generate an interrupt
 	TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-
 }
 
-
 int main(void) {
-
-	// set system clock -> 40MHz
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-	UARTInit();
-	ADCInit();
-	PWMInit();
-	TimerInit();
-
-	// enable processor interrupts
 	IntMasterEnable();
-	// enable the UART interrupt
-	IntEnable(INT_UART1);
-	//only enable RX and TX interrupts
-	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
-
-	UARTprintf("Embedded Systems - TEAM 6 \r\n");
-	UARTprintf("Enter Command: ");
+	UARTInit(); //Interrupt Driven
+	ADCInit();  // no interrupt
+//	PWMInit();  // no interrupt
+//	TimerInit(); //Interrupt Driven//DMAInit(); //Interrupt Driven
 
 
-	while (1)
-	{
+//
+//	IntEnable(INT_UART1);
+//	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
 
-	}
+	UARTprintf("Embedded Systems - TEAM 6\r\n");
+	UARTprintf("Type help\n");
+
+	while(1)
+	    ;
 }
