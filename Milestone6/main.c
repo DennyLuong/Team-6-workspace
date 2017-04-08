@@ -40,7 +40,7 @@ int speedAdjust;
 
 void PWMForward(void){
 	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_3, 0);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_2|GPIO_PIN_3);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
 }
@@ -87,7 +87,7 @@ void rotateCW(int diff) {
 
 	unsigned int speed = diff * ui32Load/100;
 	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 0);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 4);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speed);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speed);
 }
@@ -96,7 +96,7 @@ void rotateCCW(int diff) {
 
 	unsigned int speed = diff * ui32Load/100;
 	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 0);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 8);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, GPIO_PIN_3);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speed);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speed);
 }
@@ -439,7 +439,7 @@ void PWMInit(void)
 	PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, ui32Load);
 
 	// enable mode = 1
-	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_1, GPIO_PIN_1);
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_1, 1);
 
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, 1);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, 1);
