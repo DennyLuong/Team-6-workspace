@@ -40,7 +40,7 @@ int speedAdjust;
 
 void PWMForward(void){
 	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_3, 12);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_3, 0);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
 }
@@ -54,22 +54,18 @@ void PWMStop(void){
 }
 
 void PWMSpeed(void){
-
 	char inSpeed[3];
-
 	UARTprintf("Enter Speed (1-100): ");
-
 	UARTgets(inSpeed, 4);
-
 	speedAdjust = atoi(inSpeed);
-
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speedAdjust * ui32Load/100);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speedAdjust * ui32Load/100);
 }
 
 void PWMRightReverse(void){  //
 	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 4);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 0);
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
 }
@@ -166,18 +162,15 @@ void computePID(void){
  */
 
 void Timer0IntHandler(void) {
-
 	// clear the timer interrupt
 	TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-
 	computePID();
-
 }
 /********************************************************************************************************
  *                                     ADC get_adc_value Functions                                      *
  ********************************************************************************************************/
 
-uint32_t (*get_adc_value)(void);  // when working on the PID
+uint32_t (*get_adc_value)(void);  // when working on the PID access using function pointer
 uint8_t rightDistance(void){
     // step 0 - ADC_CTL_CH0
     UARTprintf("value right distance:");
@@ -352,7 +345,7 @@ void getFunction(char function){
         leftReflection();
         break;
     case MF:
-        PWMForward();   // its rotating clockwise
+        PWMForward();
         break;
     case RR:                // nothing
         PWMRightReverse();
@@ -475,9 +468,9 @@ int main(void) {
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 	IntMasterEnable();
 	UARTInit(); //Interrupt Driven
-	ADCInit();  // no interrupt
-//	PWMInit();  // no interrupt
-//	TimerInit(); //Interrupt Driven//DMAInit(); //Interrupt Driven
+	ADCInit();
+	PWMInit();
+//PID	TimerInit(); //Interrupt Driven//DMAInit(); //Interrupt Driven
 
 
 //
