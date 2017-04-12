@@ -31,76 +31,47 @@
 
 #define PWM_FREQUENCY 55
 
-
-
 unsigned int ui32Load = 0;
 unsigned int ui32PWMClock = 0;
 unsigned int ui8Adjust = 83;
 int speedAdjust;
 
-void PWMForward(void){
-	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_3, GPIO_PIN_2|GPIO_PIN_3);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
+void move_forward(void){
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_2|GPIO_PIN_7);
+}
+
+void move_reverse(void){
+    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, 0|0);
+}
+
+void move_cw(void){
+    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_2|0);
+}
+
+void move_ccw(void){
+    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_7|0);
 }
 
 void PWMStart(void){
 	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
+	PWMSetSpeed(ui32Load);
 }
 
 void PWMStop(void){
 	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), false);
 }
 
-void PWMSpeed(void){
-	char inSpeed[3];
+void PWMUserSetSpeed(void){
+	unsigned char inSpeed[3];
 	UARTprintf("Enter Speed (1-100): ");
 	UARTgets(inSpeed, 4);
-	speedAdjust = atoi(inSpeed);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speedAdjust * ui32Load/100);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speedAdjust * ui32Load/100);
+	PWMSetSpeed(atoi(inSpeed));
 }
 
-void PWMRightReverse(void){  //
-	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 0);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
+void PWMSetSpeed(unsigned int adjust){
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, adjust * ui32Load/100);
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, adjust * ui32Load/100);
 }
-
-void PWMLeftReverse(void){
-	ui8Adjust = ui32Load;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 8);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui8Adjust);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui8Adjust);
-}
-
-void setSpeed(unsigned int adjust) {
-
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, adjust);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, adjust);
-}
-
-void rotateCW(int diff) {
-
-	unsigned int speed = diff * ui32Load/100;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 0);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speed);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speed);
-}
-
-void rotateCCW(int diff) {
-
-	unsigned int speed = diff * ui32Load/100;
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 0);
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, GPIO_PIN_3);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, speed);
-	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, speed);
-}
-
 /**************************************
  *  	  PID Control Functions       *
  **************************************/
@@ -144,10 +115,12 @@ void computePID(void){
 		power_difference = -max;
 
 	if (power_difference < 0) {
-		rotateCW(power_difference);
+		move_cw();
+		PWMSetSpeed(power_difference);
 	}
 	else {
-		rotateCCW(power_difference);
+		move_ccw();
+		PWMSetSpeed(power_difference);
 	}
 //	else {
 //		PWMForward();
@@ -345,25 +318,25 @@ void getFunction(char function){
         leftReflection();
         break;
     case MF:
-        PWMForward();
+      //  PWMForward();
         break;
     case RR:                // nothing
-        PWMRightReverse();
+     //   PWMRightReverse();
         break;
     case LR:                // nothing
-        PWMLeftReverse();
+   //     PWMLeftReverse();
         break;
     case ES:
-        PWMStop();
+     //   PWMStop();
         break;
     case SS:                //w ork
-        PWMSpeed();
+     //   PWMSpeed();
         break;
     case MS:
-        PWMStart();
+     //   PWMStart();
         break;
     case GO:
-        PIDStart();
+     //   PIDStart();
         break;
     default:
         UARTprintf("Error \n");
@@ -419,8 +392,8 @@ void PWMInit(void)
     //  Port PD1 - PWM PIN   - RIGHT MOTOR
     //  Port PD2 - PHASE PIN - LEFT MOTOR
     //  Port PD0 - PWM PIN   - LEFT MOTOR
-    // FORWARD 0 BITMASKED
-    // REVERSE 1 BITMASKED
+    // FORWARD 0 BITMASKED  // LOGIC SWITCHED - > FORWARD 1 BITMASKED
+    // REVERSE 1 BITMASKED  // LOGIC SWITCHED - > REVERSE 0 BITMASKED
 
 	SysCtlPWMClockSet(SYSCTL_PWMDIV_64);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM1);
@@ -453,12 +426,14 @@ void PWMInit(void)
 	PWMGenEnable(PWM1_BASE, PWM_GEN_0);
 
 	// to be erased
-	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
+//	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
+//
+//	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_7|0);
+//	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
+//	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load);
 
-	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_7|0);
-	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
-	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load);
-
+	PWMStart();
+	//move_cw();
 }
 
 void TimerInit(void) {
