@@ -29,12 +29,14 @@
 #include "utils/uartstdio.h"
 #include <string.h>
 
+/********************************************************************************************************
+ *                                             PWM Functions                                            *
+ ********************************************************************************************************/
 #define PWM_FREQUENCY 55
 
 unsigned int ui32Load = 0;
 unsigned int ui32PWMClock = 0;
 unsigned int ui8Adjust = 83;
-int speedAdjust;
 
 void move_forward(void){
 	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_2|GPIO_PIN_7);
@@ -72,10 +74,10 @@ void PWMSetSpeed(unsigned int adjust){
     PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, adjust * ui32Load/100);
     PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, adjust * ui32Load/100);
 }
-/**************************************
- *  	  PID Control Functions       *
- **************************************/
 
+/********************************************************************************************************
+ *                                       PID Control Functions                                          *
+ ********************************************************************************************************/
 void PIDStart(void) {
 	// enable Timer0, SubtimerA
 	TimerEnable(TIMER0_BASE, TIMER_A);
@@ -139,6 +141,7 @@ void Timer0IntHandler(void) {
 	TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 	computePID();
 }
+
 /********************************************************************************************************
  *                                     ADC get_adc_value Functions                                      *
  ********************************************************************************************************/
