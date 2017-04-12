@@ -415,7 +415,7 @@ void ADCInit(void) {
 void PWMInit(void)
 {
     //  Port PE1 - MODE = 1
-    //  Port PD3 - PHASE PIN - RIGHT MOTOR
+    //  Port PD3 - PHASE PIN - RIGHT MOTOR  // changed to PD7
     //  Port PD1 - PWM PIN   - RIGHT MOTOR
     //  Port PD2 - PHASE PIN - LEFT MOTOR
     //  Port PD0 - PWM PIN   - LEFT MOTOR
@@ -427,8 +427,15 @@ void PWMInit(void)
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
 
+	// hardware unlock for gpio pd7
+	HWREG(GPIO_PORTD_BASE + GPIO_O_LOCK) = GPIO_LOCK_KEY;
+	HWREG(GPIO_PORTD_BASE + GPIO_O_CR) |= 0x80;
+    HWREG(GPIO_PORTD_BASE + GPIO_O_AFSEL) &= ~0x80;
+    HWREG(GPIO_PORTD_BASE + GPIO_O_DEN) |= 0x80;
+    HWREG(GPIO_PORTD_BASE + GPIO_O_LOCK) = 0;
+
 	GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-	GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE,GPIO_PIN_2 | GPIO_PIN_3);
+	GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE,GPIO_PIN_2 | GPIO_PIN_7);
 	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE,GPIO_PIN_1);
 	GPIOPinConfigure(GPIO_PD0_M1PWM0);
 	GPIOPinConfigure(GPIO_PD1_M1PWM1);
@@ -439,11 +446,19 @@ void PWMInit(void)
 	PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, ui32Load);
 
 	// enable mode = 1
-	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_1, 1);
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_1, GPIO_PIN_1);
 
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, 1);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, 1);
 	PWMGenEnable(PWM1_BASE, PWM_GEN_0);
+
+	// to be erased
+	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
+
+	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_7|0);
+	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
+	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load);
+
 }
 
 void TimerInit(void) {
