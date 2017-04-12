@@ -425,15 +425,8 @@ void PWMInit(void)
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, 1);
 	PWMGenEnable(PWM1_BASE, PWM_GEN_0);
 
-	// to be erased
-//	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
-//
-//	GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_7|0);
-//	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
-//	    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load);
-
-	PWMStart();
-	//move_cw();
+	//PWMStart();
+	//move_forward();
 }
 
 void TimerInit(void) {
