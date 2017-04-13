@@ -82,19 +82,19 @@ void PIDStart(void) {
 	// enable Timer0, SubtimerA
 	TimerEnable(TIMER0_BASE, TIMER_A);
 	unsigned int speed = 2840;
-	setSpeed(speed);
+	PWMSetSpeed(speed);
 	PWMStart();
-	PWMForward();
+	move_forward();
 }
 
 uint32_t cur_pos;
-const uint32_t target_dist = 1000;
+const uint32_t target_dist = 1500;
 int proportional;
 int last_proportional = 0;
 int derivative;
 int integral = 0;
 const float p_const = 20;
-const int i_const = 10000;
+const int i_const = 5000;
 float d_const = 1.5;
 const int max = 100;
 
@@ -103,11 +103,11 @@ void computePID(void){
 	// PID calculations
 	cur_pos = rightDistance();
 	proportional = cur_pos - target_dist;
-	//derivative = proportional - last_proportional;
-	//integral += proportional;
-	//last_proportional = proportional;
+	derivative = proportional - last_proportional;
+	integral += proportional;
+	last_proportional = proportional;
 
-	int power_difference = proportional/p_const;
+	int power_difference = proportional/p_const + integral/i_const + derivative/2;
 
 	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
 
@@ -116,17 +116,18 @@ void computePID(void){
 	if (power_difference < -max)
 		power_difference = -max;
 
+
 	if (power_difference < 0) {
 		move_cw();
-		PWMSetSpeed(power_difference);
+		PWMSetSpeed(150 + power_difference);
 	}
-	else {
+	else if (power_difference == max) {
 		move_ccw();
 		PWMSetSpeed(power_difference);
 	}
-//	else {
-//		PWMForward();
-//	}
+	else {
+		move_forward();
+	}
 
 }
 
@@ -146,20 +147,32 @@ void Timer0IntHandler(void) {
  *                                     ADC get_adc_value Functions                                      *
  ********************************************************************************************************/
 
-uint32_t (*get_adc_value)(void);  // when working on the PID access using function pointer
-uint8_t rightDistance(void){
+uint8_t (*get_adc_value)(void);  // when working on the PID access using function pointer
+uint32_t rightDistance(void){
     // step 0 - ADC_CTL_CH0
+	uint32_t ui32ADC0Value[4];
+	ADCIntClear(ADC0_BASE, 1);
+	ADCProcessorTrigger(ADC0_BASE, 1);
+	while(!ADCIntStatus(ADC0_BASE, 1, false)){
+	}// wait for conversion to complete
+	ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
     UARTprintf("value right distance:");
-    uint8_t value = ADC(0);
-    UARTprintf("%u \n", value);
-    return value;
+    UARTprintf("%u \n", ui32ADC0Value[0]);
+    return ui32ADC0Value[0];
 }
-uint8_t frontDistance(void){
+uint32_t frontDistance(void){
     // step 1 - ADC_CTL_CH1
+	uint32_t ui32ADC0Value[4];
+	ADCIntClear(ADC0_BASE, 2);
+	ADCProcessorTrigger(ADC0_BASE, 2);
+	while(!ADCIntStatus(ADC0_BASE, 2, false)){
+	}// wait for conversion to complete
+	ADCSequenceDataGet(ADC0_BASE, 2, ui32ADC0Value);
+
     UARTprintf("value front distance:");
-    uint8_t value = ADC(1);
-    UARTprintf("%u \n", value);
-    return value;
+    UARTprintf("%u \n", ui32ADC0Value[0]);
+
+   return ui32ADC0Value[0];
 }
 uint8_t rightReflection(void){
     // step 2 - ADC_CTL_CH8
@@ -317,29 +330,30 @@ void getFunction(char function){
     case R1:
         rightDistance();
         frontDistance();
-        rightReflection();
-        leftReflection();
+        //rightReflection();
+        //leftReflection();
         break;
     case MF:
-      //  PWMForward();
+    	move_forward();
         break;
-    case RR:                // nothing
-     //   PWMRightReverse();
+    case RR:
+    	move_cw();
         break;
-    case LR:                // nothing
-   //     PWMLeftReverse();
+    case LR:
+    	move_ccw();
         break;
     case ES:
-     //   PWMStop();
+        PWMStop();
         break;
-    case SS:                //w ork
-     //   PWMSpeed();
+    case SS:
+    	PWMUserSetSpeed();
         break;
     case MS:
-     //   PWMStart();
+        PWMStart();
         break;
     case GO:
-     //   PIDStart();
+        PIDStart();
+        //computePID();
         break;
     default:
         UARTprintf("Error \n");
@@ -377,15 +391,19 @@ void ADCInit(void) {
 
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-	GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2 | GPIO_PIN_5 | GPIO_PIN_4);
+	//GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2 | GPIO_PIN_5 | GPIO_PIN_4);
+	GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2);
 
 	ADCSequenceConfigure(ADC0_BASE, 1, ADC_TRIGGER_PROCESSOR, 0);
 
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH0 );
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 1, ADC_CTL_CH1 );
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH8 );
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 3, ADC_CTL_CH9  | ADC_CTL_END |ADC_CTL_IE);
+	ADCSequenceConfigure(ADC0_BASE, 2, ADC_TRIGGER_PROCESSOR, 0);
+
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH0 | ADC_CTL_END | ADC_CTL_IE);
+	ADCSequenceStepConfigure(ADC0_BASE, 2, 0, ADC_CTL_CH1 | ADC_CTL_END | ADC_CTL_IE);
+	//ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH8 );
+	//ADCSequenceStepConfigure(ADC0_BASE, 1, 3, ADC_CTL_CH9  | ADC_CTL_END |ADC_CTL_IE);
 	ADCSequenceEnable(ADC0_BASE, 1);
+	ADCSequenceEnable(ADC0_BASE, 2);
 }
 
 void PWMInit(void)
@@ -456,7 +474,8 @@ int main(void) {
 	UARTInit(); //Interrupt Driven
 	ADCInit();
 	PWMInit();
-//PID	TimerInit(); //Interrupt Driven//DMAInit(); //Interrupt Driven
+//PID
+	TimerInit(); //Interrupt Driven//DMAInit(); //Interrupt Driven
 
 
 //
