@@ -32,7 +32,7 @@
 /********************************************************************************************************
  *                                             PWM Functions                                            *
  ********************************************************************************************************/
-#define PWM_FREQUENCY 55
+#define PWM_FREQUENCY 10000
 
 unsigned int ui32Load = 0;
 unsigned int ui32PWMClock = 0;
@@ -87,6 +87,7 @@ void PIDStart(void) {
 	move_forward();
 }
 
+int front_target = 2000;
 uint32_t cur_pos;
 const uint32_t target_dist = 1500;
 int proportional;
@@ -94,20 +95,27 @@ int last_proportional = 0;
 int derivative;
 int integral = 0;
 const float p_const = 20;
-const int i_const = 5000;
+const int i_const = 3750;
 float d_const = 1.5;
 const int max = 100;
 
 void computePID(void){
 
 	// PID calculations
+	while(frontDistance() > front_target)
+	{
+		move_ccw();
+		PWMSetSpeed(80);
+	}
+
+
 	cur_pos = rightDistance();
 	proportional = cur_pos - target_dist;
-	derivative = proportional - last_proportional;
+	//derivative = proportional - last_proportional;
 	integral += proportional;
-	last_proportional = proportional;
+	//last_proportional = proportional;
 
-	int power_difference = proportional/p_const + integral/i_const + derivative/2;
+	int power_difference = proportional/p_const  + integral/i_const + derivative * d_const;
 
 	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
 
