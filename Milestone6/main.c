@@ -89,7 +89,7 @@ void PIDStart(void) {
 
 int front_target = 2000;
 uint32_t cur_pos;
-const uint32_t target_dist = 1500;
+const uint32_t target_dist = 2000;
 int proportional;
 int last_proportional = 0;
 int derivative;
@@ -184,8 +184,8 @@ uint32_t frontDistance(void){
 }
 uint8_t rightReflection(void){
     // step 2 - ADC_CTL_CH8
-    UARTprintf("value right flection:");
-    uint8_t value = ADC(2);
+    UARTprintf("value right reflection:");
+    uint8_t value = ADC(1);
     UARTprintf("%u \n", value);
     return value;
 }
@@ -193,7 +193,7 @@ uint8_t rightReflection(void){
 uint8_t leftReflection(void){
     // step 3 - ADC_CTL_CH9
     UARTprintf("value left reflection:");
-    uint8_t value = ADC(3);
+    uint8_t value = ADC(2);
     UARTprintf("%u \n", value);
     return value;
 }
@@ -338,8 +338,8 @@ void getFunction(char function){
     case R1:
         rightDistance();
         frontDistance();
-        //rightReflection();
-        //leftReflection();
+        rightReflection();
+        leftReflection();
         break;
     case MF:
     	move_forward();
@@ -406,10 +406,10 @@ void ADCInit(void) {
 
 	ADCSequenceConfigure(ADC0_BASE, 2, ADC_TRIGGER_PROCESSOR, 0);
 
-	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH0 | ADC_CTL_END | ADC_CTL_IE);
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH0);
 	ADCSequenceStepConfigure(ADC0_BASE, 2, 0, ADC_CTL_CH1 | ADC_CTL_END | ADC_CTL_IE);
-	//ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH8 );
-	//ADCSequenceStepConfigure(ADC0_BASE, 1, 3, ADC_CTL_CH9  | ADC_CTL_END |ADC_CTL_IE);
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 1, ADC_CTL_CH8 );
+	ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH9  | ADC_CTL_END |ADC_CTL_IE);
 	ADCSequenceEnable(ADC0_BASE, 1);
 	ADCSequenceEnable(ADC0_BASE, 2);
 }
