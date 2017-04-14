@@ -34,10 +34,12 @@ int main(void)
     ConfigureTimer();
     TimerEnable(TIMER0_BASE, TIMER_BOTH);
 
-    GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
+
 
     while(1)
     {
+
+    	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4);
 
         GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4);
 
@@ -52,6 +54,8 @@ int main(void)
         finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
 
         count1 = finalCount - initialCount;
+
+        GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_5);
 
         GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_5, GPIO_PIN_5);
 
