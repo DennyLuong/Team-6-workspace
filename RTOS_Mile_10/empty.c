@@ -9,6 +9,20 @@
  *
  */
 
+
+//----------------------------------------
+// BIOS header files
+//----------------------------------------
+#include <xdc/std.h>  						//mandatory - have to include first, for BIOS types
+#include <ti/sysbios/BIOS.h> 				//mandatory - if you call APIs like BIOS_start()
+#include <xdc/runtime/Log.h>				//needed for any Log_info() call
+#include <xdc/cfg/global.h>
+
+
+
+
+
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -164,49 +178,8 @@ int error = 0;
 void Timer0IntHandler(void) {
 	// clear the timer interrupt
 	TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+	Swi_post(PIDswi);
 
-	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4);
-    GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4);
-    SysCtlDelay(100);
-
-    GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4);
-
-    initialTimerCount = TimerValueGet(TIMER0_BASE, TIMER_A);
-
-    while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) != 0){};
-
-    finalTimerCount = TimerValueGet(TIMER0_BASE, TIMER_A);
-
-    blackCount = finalTimerCount - initialTimerCount;
-
-    if((blackCount > blk_thickness - 5))
-    {
-    	boolcount++;
-    	if (boolcount == 1){
-    	blackfound = true;
-    	}
-    	else if (boolcount == 2)
-    		boolcount = 0;
-    		blackfound = false;
-    }
-
-    if(altSecond && !bufferFull){
-    	buffer[i] = error;
-    	altSecond = false;
-    	i++;
-    }
-    else altSecond = false;
-
-    if(i == 19) bufferFull = true;
-
-
-    if(blackfound && bufferFull){
-       //Print DATA BUFFERS FOR ERROR
-    	UARTprintf("data buffer\n");
-    	for(i = 0; i < 20; i++){
-    		UARTprintf("%02x ", &buffer[i]);
-    	}
-    }
 }
 
 /********************************************************************************************************
@@ -502,18 +475,18 @@ void TimerInit(void) {
 
 	uint32_t ui32Period;
 
-	SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
 	// enable timer0 as 32-bit timer in periodic mode
-	TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+	TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
 
-	// toggle GPIO at 20Hz for 50% duty cycle
-	ui32Period = (SysCtlClockGet() / 20) / 2;
-	TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period-1);
+	// Interrupt at 20Hz
+	ui32Period = (SysCtlClockGet() / 20);
+	TimerLoadSet(TIMER2_BASE, TIMER_A, ui32Period-1);
 
-	// enable timer0a interrupt vector
-	IntEnable(INT_TIMER0A);
+	// enable timer2a interrupt vector
+	IntEnable(INT_TIMER2A);
 	// enable specific vector within timer to generate an interrupt
-	TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+	TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 }
 
 
@@ -522,7 +495,7 @@ void TimerInit(void) {
 
 int main(void) {
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-	IntMasterEnable();
+	// IntMasterEnable();
 	UARTInit(); //Interrupt Driven
 	ADCInit();
 	PWMInit();
