@@ -270,20 +270,20 @@ uint8_t CharacterCount = 0;
 
 char responseGet(char chars[]){
     static const char * LookupTable[] = {
-            "HH", " Enter 2char function      ",
-            "MS", " PWM enable                ",
+            "HH", " Enter 2char function      ", //
+            "MS", " PWM enable                ",  
             "P0", " PWM disable               ",
-            "MF", " Moving Forward            ",
-            "RR", " Right Wheel Reverse       ",
-            "SS", " Set Speed                 ",
+            "MF", " Moving Forward            ", //
+            "RR", " Right Wheel Reverse       ", //
+            "SS", " Set Speed                 " ,//
             "LR", " Left Wheel Reverse        ",
             "LG", " Light Get                 ",
-            "GO", " PID initiated             ",
+            "GO", " PID initiated             ", 
             "R0", " Read Front Distance Sensor",
             "R1", " Read Right Distance Sensor",
             "TD", " Toggle Data Acquisition   ",
             "DS", " Post Drive Semaphore      ",
-            "ES", " Emergency Stop            ",
+            "ES", " Emergency Stop            ", //
             "DC", " Drive Clock Start         ",
             "ER", " Error                     "
     };
