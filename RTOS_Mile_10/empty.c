@@ -99,7 +99,7 @@ const int i_const = 3500;
 float d_const = 0.5;
 const int max = 100;
 
-void computePID(void){
+int computePID(void){
 
 	// PID calculations
 	if(frontDistance() > front_target)
@@ -139,6 +139,7 @@ void computePID(void){
 		move_forward();
 	}
 
+	return power_difference;
 }
 
 
@@ -147,10 +148,65 @@ void computePID(void){
  * Timer0 Interrupt Handler
  */
 
+bool blackfound = false;
+bool altSecond  = true;
+bool bufferFull	= false;
+uint32_t initialTimerCount,
+         finalTimerCount,
+         blackCount;
+uint32_t i = 0;
+
+uint8_t  blk_thickness = 35;
+uint8_t  boolcount     = 0;
+int buffer[20];
+int error = 0;
+
 void Timer0IntHandler(void) {
 	// clear the timer interrupt
 	TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-	computePID();
+
+	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4);
+    GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4);
+    SysCtlDelay(100);
+
+    GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4);
+
+    initialTimerCount = TimerValueGet(TIMER0_BASE, TIMER_A);
+
+    while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) != 0){};
+
+    finalTimerCount = TimerValueGet(TIMER0_BASE, TIMER_A);
+
+    blackCount = finalTimerCount - initialTimerCount;
+
+    if((blackCount > blk_thickness - 5))
+    {
+    	boolcount++;
+    	if (boolcount == 1){
+    	blackfound = true;
+    	}
+    	else if (boolcount == 2)
+    		boolcount = 0;
+    		blackfound = false;
+    }
+
+    if(altSecond && !bufferFull){
+    	buffer[i] = error;
+    	altSecond = false;
+    	i++;
+    }
+    else altSecond = false;
+
+    if(i == 19) bufferFull = true;
+
+
+    if(blackfound && bufferFull){
+       //Print DATA BUFFERS FOR ERROR
+    	UARTprintf("data buffer\n");
+    	for(i = 0; i < 20; i++){
+    		UARTprintf("%02x ", &buffer[i]);
+    	}
+    }
 }
 
 /********************************************************************************************************
@@ -248,44 +304,24 @@ typedef enum{
     ER=30
 }Commands;
 
-//typedef void(*function)(void);
-//struct commandStruct {
-//    char const *name;
-//    function execute;
-//    char const *response;
-//};
-//
-//const struct commandStruct commands[] = {
-//    {"help", &helpCommand, "Printing Help Statement... " },
-//    {"name2", &sayPoop, "poooooop"},
-//};
-//
-//commands[0].execute();
-
-//void helpCommand (void){
-//    static const helplisting[]= "\n";
-//}
-
-
-
 uint8_t CharacterCount = 0;
 
 char responseGet(char chars[]){
     static const char * LookupTable[] = {
-            "HH", " Enter 2char function      ", //
-            "MS", " PWM enable                ",  
+            "HH", " Enter 2char function      ",
+            "MS", " PWM enable                ",
             "P0", " PWM disable               ",
-            "MF", " Moving Forward            ", //
-            "RR", " Right Wheel Reverse       ", //
-            "SS", " Set Speed                 " ,//
+            "MF", " Moving Forward            ",
+            "RR", " Right Wheel Reverse       ",
+            "SS", " Set Speed                 ",
             "LR", " Left Wheel Reverse        ",
             "LG", " Light Get                 ",
-            "GO", " PID initiated             ", 
+            "GO", " PID initiated             ",
             "R0", " Read Front Distance Sensor",
             "R1", " Read Right Distance Sensor",
             "TD", " Toggle Data Acquisition   ",
             "DS", " Post Drive Semaphore      ",
-            "ES", " Emergency Stop            ", //
+            "ES", " Emergency Stop            ",
             "DC", " Drive Clock Start         ",
             "ER", " Error                     "
     };
@@ -480,6 +516,10 @@ void TimerInit(void) {
 	TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
 }
 
+
+
+
+
 int main(void) {
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 	IntMasterEnable();
@@ -487,16 +527,20 @@ int main(void) {
 	ADCInit();
 	PWMInit();
 //PID
-	TimerInit(); //Interrupt Driven//DMAInit(); //Interrupt Driven
+	TimerInit(); //Interrupt Driven
 
-
-//
+	SysCtlDelay(20000000);
 //	IntEnable(INT_UART1);
 //	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
 
 	UARTprintf("Embedded Systems - TEAM 6\r\n");
-	UARTprintf("Type help\n");
+	//UARTprintf("Type help\n");
+	PIDStart();
+	while(1) {
 
-	while(1)
-	    ;
+		error = computePID();
+	}
+
+
+
 }
