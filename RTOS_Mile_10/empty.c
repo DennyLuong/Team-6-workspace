@@ -508,12 +508,13 @@ int main(void) {
 
 	UARTprintf("Embedded Systems - TEAM 6\r\n");
 	//UARTprintf("Type help\n");
-	PIDStart();
-	while(1) {
+//	PIDStart();
+//	while(1) {
+//
+//		error = computePID();
+//	}
 
-		error = computePID();
-	}
-
+	BIOS_start();
 
 
 }
