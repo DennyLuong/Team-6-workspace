@@ -66,7 +66,7 @@ void move_ccw(void){
 
 void PWMStart(void){
 	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
-	PWMSetSpeed(ui32Load);
+	PWMSetSpeed(ui32Load, ui32Load);
 }
 
 void PWMStop(void){
@@ -77,12 +77,12 @@ void PWMUserSetSpeed(void){
 	unsigned char inSpeed[3];
 	UARTprintf("Enter Speed (1-100): ");
 	UARTgets(inSpeed, 4);
-	PWMSetSpeed(atoi(inSpeed));
+	PWMSetSpeed(atoi(inSpeed), atoi(inSpeed));
 }
 
-void PWMSetSpeed(unsigned int adjust){
-    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, adjust * ui32Load/100);
-    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, adjust * ui32Load/100);
+void PWMSetSpeed(unsigned int left_adjust, unsigned int right_adjust){
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, left_adjust * ui32Load/100);
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, right_adjust * ui32Load/100);
 }
 
 /********************************************************************************************************
@@ -115,11 +115,11 @@ void PIDStart(void) {
 	// enable Timer2, SubtimerA
 	TimerEnable(TIMER2_BASE, TIMER_A);
 	unsigned int speed = 2840;
-	PWMSetSpeed(speed);
+	PWMSetSpeed(speed, speed);
 	PWMStart();
 	move_forward();
 }
-
+unsigned int RM, LM;
 const uint32_t front_target = 2200;
 uint32_t cur_pos;
 const uint32_t target_dist = 2000;
@@ -127,28 +127,31 @@ int proportional;
 int last_proportional = 0;
 int derivative;
 int integral = 0;
-const float p_const = 15;
-const int i_const = 4000;
-float d_const = 0;
+const float p_const = 1;
+const int i_const =  10000;
+float d_const = 0 ;//1.5;
 const int max = 100;
 int dataCollectionToggle = 0;
 bool lineDetectToggle= 0; // needs to be reflection sensor
 int computePID(void){
 
 
+	if(blackLineFound()){
+		lineDetectToggle = !(lineDetectToggle);
+	}
 
 	// PID calculations
-	if(frontDistance() > front_target)
-	{
-		while (!(frontDistance() < 800)) {
-			move_ccw();
-			PWMSetSpeed(80);
-		}
-	}
+//	if(frontDistance() > front_target)
+//	{
+//		while (!(frontDistance() < 800)) {
+//			move_ccw();
+//			PWMSetSpeed(80, 80);
+//		}
+//	}
 
 	if(rightDistance() < 800 )
 	{
-		while(!(rightDistance() > 1350))
+		while(!(rightDistance() > 1500))
 		{
 			move_forward();
 			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
@@ -164,7 +167,7 @@ int computePID(void){
 	integral += proportional;
 	last_proportional = proportional;
 
-	int power_difference = proportional/p_const + integral/i_const;
+	int power_difference = proportional/p_const ;//+ integral/i_const + derivative * d_const;
 
 	if(lineDetectToggle && dataCollectionToggle){
 	    distanceBufferLog(power_difference);
@@ -179,20 +182,40 @@ int computePID(void){
 		power_difference = -max;
 
 
-	if (power_difference < 0) {
-		move_cw();
-		PWMSetSpeed(150 + power_difference);
-	}
-	else if (power_difference == max) {
-		move_ccw();
-		PWMSetSpeed(power_difference);
-	}
-	else {
-		move_forward();
-	}
-	if(blackLineFound()){
-		lineDetectToggle = !(lineDetectToggle);
-	}
+	  if(power_difference < 0)
+		  PWMSetSpeed(max+power_difference, max);
+	  else if (power_difference == max)
+		  PWMSetSpeed(max, max-power_difference);
+	  else
+		  move_forward();
+
+
+
+
+
+//	if (power_difference < 0) {
+//		//move_cw();
+//		// ADD THE DIFFERENCE TO THE LEFT MOTOR AND SUBTRACTED FROM RIGHT MOTOR
+//		RM = 80 - power_difference;
+//		LM = 80 + power_difference;
+//
+//		if(LM <= 0 )
+//			LM = 1;
+//
+//		if(RM >= max)
+//			RM = max;
+//
+//		UARTprintf("POWER DIFFERENCE: %d\n",power_difference);
+//		PWMSetSpeed(LM, RM);
+//	}
+//	else if (power_difference == max) {
+//		//move_ccw();
+//		PWMSetSpeed(150 - power_difference, 100);
+//	}
+//	else {
+//		move_forward();
+//	}
+
 	return power_difference;
 }
 
@@ -225,14 +248,14 @@ bool blackLineFound(void)
 	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
 	{
 		TimerCount++;
-		if(TimerCount > 450) {
+		if(TimerCount > 380) {
 			PWMStop();
 			return false;
 		}
 	}
 	//UARTprintf("      Count %d \n", TimerCount);
 
-	if(TimerCount > 250)
+	if(TimerCount > 200)
 		{
 			//UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
 			return true;
