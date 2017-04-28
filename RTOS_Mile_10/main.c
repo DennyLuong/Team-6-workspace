@@ -108,14 +108,14 @@ int proportional;
 int last_proportional = 0;
 int derivative;
 int integral = 0;
-const float p_const = 20;
-const int i_const = 3500;
-float d_const = 0.5;
+const float p_const = 15;
+const int i_const = 3000;
+float d_const = 0;
 const int max = 100;
 
 int computePID(void){
 
-	blackLineFound();
+
 
 	// PID calculations
 	if(frontDistance() > front_target)
@@ -128,7 +128,7 @@ int computePID(void){
 
 	if(rightDistance() < 800 )
 	{
-		while(!(rightDistance() > 1500))
+		while(!(rightDistance() > 1350))
 		{
 			move_forward();
 			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
@@ -144,9 +144,9 @@ int computePID(void){
 	integral += proportional;
 	last_proportional = proportional;
 
-	int power_difference = proportional/p_const + integral/i_const;
+	int power_difference = proportional/p_const + derivative*d_const;
 
-	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
+//	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
 
 	if (power_difference > max)
 		power_difference = max;
@@ -166,19 +166,17 @@ int computePID(void){
 		move_forward();
 	}
 
+	blackLineFound();
 
 	return power_difference;
 }
-
 
 
 /*
  * Timer2 Interrupt Handler
  */
 
-bool blackfound = false;
-bool altSecond  = true;
-bool bufferFull	= false;
+
 uint32_t TimerCount;
 uint32_t i = 0;
 
@@ -193,7 +191,7 @@ bool blackLineFound(void)
 	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
 
 	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4|GPIO_PIN_5);
-	SysCtlDelay(50);
+	SysCtlDelay(100);
 
 	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
 
@@ -202,12 +200,16 @@ bool blackLineFound(void)
 	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
 	{
 		TimerCount++;
-		if(TimerCount > 6000 )
+		if(TimerCount > 450)
 		PWMStop();
 	}
+	//UARTprintf("      Count %d \n", TimerCount);
 
-	if(TimerCount > 4000)
-		return true;
+	if(TimerCount > 250)
+		{
+			//UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
+			return true;
+		}
 	else
 		return false;
 
