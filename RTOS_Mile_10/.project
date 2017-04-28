@@ -29,7 +29,7 @@
 		<link>
 			<name>uartstdio.c</name>
 			<type>1</type>
-			<locationURI>PARENT-6-PROJECT_LOC/ti/TivaWare_C_Series-2.1.4.178/utils/uartstdio.c</locationURI>
+			<location>C:/ti/TivaWare_C_Series-2.1.3.156/utils/uartstdio.c</location>
 		</link>
 	</linkedResources>
 </projectDescription>

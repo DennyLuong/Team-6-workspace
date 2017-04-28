@@ -34,7 +34,7 @@ Char task0Stack[TASKSTACKSIZE];
  *  Toggle the Board_LED0. The Task_sleep is determined by arg0 which
  *  is configured for the heartBeat Task instance.
  */
-Void heartBeatFxn(UArg arg0, UArg arg1)
+void heartBeatFxn(UArg arg0, UArg arg1)
 {
     while (1) {
         Task_sleep((UInt)arg0);
@@ -44,7 +44,13 @@ Void heartBeatFxn(UArg arg0, UArg arg1)
 
 
 
-void SYS_init(void){
+void UART_Callbk_read(UART_Handle handle, void * ptr, size_t size){
+    UART_read(handle, ptr, size); 
+    UART_write(handle, (char) ptr, size);
+}
+
+void UART_Callbk_write(UART_Handle hangle, void * ptr, size_t size){
+    UART_write(hangle, (char) ptr, size);
 }
 
 /*
@@ -75,19 +81,28 @@ int main(void)
 
     /* Turn on user LED */
     GPIO_write(Board_LED0, Board_LED_ON);
+
+
     UART_Handle uart;
     UART_Params uartParams;
 
     /* Create a UART with data processing off. */
     UART_Params_init(&uartParams);
-    uartParams.writeDataMode = UART_DATA_BINARY;
-    uartParams.readDataMode = UART_DATA_BINARY;
-    uartParams.readReturnMode = UART_RETURN_FULL;
+    UART_Params_init(&uartParams);
+    uartParams.writeDataMode = UART_DATA_TEXT;
+    uartParams.readDataMode = UART_DATA_TEXT;
+    uartParams.readReturnMode = UART_RETURN_NEWLINE;
     uartParams.readEcho = UART_ECHO_OFF;
+    uartParams.parityType = UART_PAR_NONE;
+    uartParams.dataLength = UART_LEN_8;
+    uartParams.stopBits = UART_STOP_ONE;
     uartParams.baudRate = 9600;
-    uart = UART_open(Board_UART0, &uartParams);
 
-    UART_write(uart, "\fHello world\r\n", sizeof("\fHello world\r\n"));
+    uartParams.readMode = UART_MODE_CALLBACK;
+    uartParams.writeMode = UART_MODE_CALLBACK;
+    uartParams.readCallback = &UART_Callbk_read;
+    uartParams.writeCallback = &UART_Callbk_write;
+    uart = UART_open(Board_UART0, &uartParams);
 
 
     System_printf("Starting the example\nSystem provider is set to SysMin. "

@@ -19,10 +19,6 @@
 #include <xdc/cfg/global.h>
 
 
-
-
-
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -41,7 +37,7 @@
 #include "driverlib/timer.h"
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
-#include <string.h>
+#include "string.h"
 
 /********************************************************************************************************
  *                                             PWM Functions                                            *
@@ -92,6 +88,24 @@ void PWMSetSpeed(unsigned int adjust){
 /********************************************************************************************************
  *                                       PID Control Functions                                          *
  ********************************************************************************************************/
+char distanceBuffer[20];
+//char distanceBuffer2[20];
+char * distanceBufferPtr = &distanceBuffer;
+int distanceBufferCount = 0;
+lineDetectToggle= 0; // needs to be reflection sensor
+void distanceBufferLog(int ErrorValue){
+    if(distanceBufferCount != 20){
+        *distanceBufferPtr++= ErrorValue;
+        distanceBufferCount++;
+    }
+    else{
+        UARTprintf(distanceBuffer, 20);
+        distanceBufferCount = 0;
+        memset(distanceBufferPtr, 0, 20);
+    }
+}
+
+
 void PIDStart(void) {
 	// enable Timer0, SubtimerA
 	TimerEnable(TIMER0_BASE, TIMER_A);
@@ -112,7 +126,7 @@ const float p_const = 20;
 const int i_const = 3500;
 float d_const = 0.5;
 const int max = 100;
-
+int dataCollectionToggle = 0;
 int computePID(void){
 
 	// PID calculations
@@ -132,6 +146,10 @@ int computePID(void){
 	last_proportional = proportional;
 
 	int power_difference = proportional/p_const + integral/i_const;
+	if(lineDetectToggle && dataCollectionToggle){
+	    distanceBufferLog(power_difference);
+	}
+	dataCollectionToggle = 1 - dataCollectionToggle; // or dataCollectionToggle = !dataCollectionToggle;
 
 	//UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
 
@@ -152,7 +170,6 @@ int computePID(void){
 	else {
 		move_forward();
 	}
-
 	return power_difference;
 }
 
