@@ -102,7 +102,8 @@ void distanceBufferLog(int ErrorValue){
     else{
       //  UARTprintf(distanceBuffer, 20);
         for(distanceBufferCount = 0 ; distanceBufferCount <20 ; distanceBufferCount++){
-            UARTprintf(distanceBuffer[distanceBufferCount], 2);
+            UARTprintf("%d", distanceBuffer[distanceBufferCount]);
+            UARTprintf("\n");
         }
         distanceBufferCount = 0;
         memset(distanceBufferPtr, 0, 20);
@@ -127,7 +128,7 @@ int last_proportional = 0;
 int derivative;
 int integral = 0;
 const float p_const = 15;
-const int i_const = 3000;
+const int i_const = 4000;
 float d_const = 0;
 const int max = 100;
 int dataCollectionToggle = 0;
