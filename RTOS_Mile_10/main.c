@@ -99,7 +99,10 @@ void distanceBufferLog(int ErrorValue){
         distanceBufferCount++;
     }
     else{
-        UARTprintf(distanceBuffer, 20);
+      //  UARTprintf(distanceBuffer, 20);
+        for(distanceBufferCount = 0 ; distanceBufferCount <20 ; distanceBufferCount++){
+            UARTprintf(distanceBuffer[distanceBufferCount], 2);
+        }
         distanceBufferCount = 0;
         memset(distanceBufferPtr, 0, 20);
     }
@@ -158,15 +161,11 @@ int computePID(void){
 	integral += proportional;
 	last_proportional = proportional;
 
-<<<<<<< HEAD:RTOS_Mile_10/empty.c
 	int power_difference = proportional/p_const + integral/i_const;
 	if(lineDetectToggle && dataCollectionToggle){
 	    distanceBufferLog(power_difference);
 	}
 	dataCollectionToggle = 1 - dataCollectionToggle; // or dataCollectionToggle = !dataCollectionToggle;
-=======
-	int power_difference = proportional/p_const + derivative*d_const;
->>>>>>> 98032a71862d98b35d58e0ac0cf062657a3df056:RTOS_Mile_10/main.c
 
 //	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
 
@@ -187,12 +186,7 @@ int computePID(void){
 	else {
 		move_forward();
 	}
-<<<<<<< HEAD:RTOS_Mile_10/empty.c
-=======
-
 	blackLineFound();
-
->>>>>>> 98032a71862d98b35d58e0ac0cf062657a3df056:RTOS_Mile_10/main.c
 	return power_difference;
 }
 
@@ -528,16 +522,12 @@ void PWMInit(void)
 	ui32Load = (ui32PWMClock / PWM_FREQUENCY) - 1;
 	PWMGenConfigure(PWM1_BASE, PWM_GEN_0, PWM_GEN_MODE_DOWN);
 	PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, ui32Load);
-
 	// enable mode = 1
 	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_1, GPIO_PIN_1);
 
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, 1);
 	PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, 1);
 	PWMGenEnable(PWM1_BASE, PWM_GEN_0);
-
-	//PWMStart();
-	//move_forward();
 }
 
 void TimerInit(void) {
@@ -558,10 +548,6 @@ void TimerInit(void) {
 	TimerIntEnable(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 }
 
-
-
-
-
 int main(void) {
 	//Set CPU Clock to 40MHz. 400MHz PLL/2 = 200 DIV 4 = 50MHz
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
@@ -578,14 +564,7 @@ int main(void) {
 //	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
 
 	UARTprintf("Embedded Systems - TEAM 6\r\n");
-	//UARTprintf("Type help\n");
-//	PIDStart();
-//	while(1) {
-//
-//		error = computePID();
-//	}
+	UARTprintf("Type command:");
 
 	BIOS_start();
-
-
 }
