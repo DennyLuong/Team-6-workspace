@@ -199,12 +199,19 @@ bool blackLineFound(void)
 
 	TimerCount = 0;
 
-	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0)
+	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
 	{
 		TimerCount++;
-		if(TimerCount++ > 3000)
-		return true;
+		if(TimerCount > 6000 )
+		PWMStop();
 	}
+
+	if(TimerCount > 4000)
+		return true;
+	else
+		return false;
+
+
 
 }
 
