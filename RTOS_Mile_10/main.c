@@ -5,7 +5,7 @@
  * Team 6
  * Authors: Robert Duenez, Katherine Perez, Sikender Shahid
  *
- * Milestone 6: Add PID control to robot
+ * Milestone 10: Rewriting of main in RTOS
  *
  */
 
@@ -93,8 +93,8 @@ void PWMSetSpeed(unsigned int adjust){
  *                                       PID Control Functions                                          *
  ********************************************************************************************************/
 void PIDStart(void) {
-	// enable Timer0, SubtimerA
-	TimerEnable(TIMER0_BASE, TIMER_A);
+	// enable Timer2, SubtimerA
+	TimerEnable(TIMER2_BASE, TIMER_A);
 	unsigned int speed = 2840;
 	PWMSetSpeed(speed);
 	PWMStart();
@@ -115,6 +115,8 @@ const int max = 100;
 
 int computePID(void){
 
+	blackLineFound();
+
 	// PID calculations
 	if(frontDistance() > front_target)
 	{
@@ -122,6 +124,17 @@ int computePID(void){
 			move_ccw();
 			PWMSetSpeed(80);
 		}
+	}
+
+	if(rightDistance() < 800 )
+	{
+		while(!(rightDistance() > 1500))
+		{
+			move_forward();
+			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
+			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load/2);
+		}
+
 	}
 
 
@@ -133,7 +146,7 @@ int computePID(void){
 
 	int power_difference = proportional/p_const + integral/i_const;
 
-	//UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
+	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
 
 	if (power_difference > max)
 		power_difference = max;
@@ -153,31 +166,52 @@ int computePID(void){
 		move_forward();
 	}
 
+
 	return power_difference;
 }
 
 
 
 /*
- * Timer0 Interrupt Handler
+ * Timer2 Interrupt Handler
  */
 
 bool blackfound = false;
 bool altSecond  = true;
 bool bufferFull	= false;
-uint32_t initialTimerCount,
-         finalTimerCount,
-         blackCount;
+uint32_t TimerCount;
 uint32_t i = 0;
 
-uint8_t  blk_thickness = 35;
-uint8_t  boolcount     = 0;
 int buffer[20];
 int error = 0;
 
-void Timer0IntHandler(void) {
+
+
+bool blackLineFound(void)
+{
+
+	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
+
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4|GPIO_PIN_5);
+	SysCtlDelay(50);
+
+	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
+
+	TimerCount = 0;
+
+	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0)
+	{
+		TimerCount++;
+		if(TimerCount++ > 3000)
+		return true;
+	}
+
+}
+
+
+void Timer2IntHandler(void) {
 	// clear the timer interrupt
-	TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+	TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 	Swi_post(PIDswi);
 
 }
@@ -197,6 +231,7 @@ uint32_t rightDistance(void){
 	ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
 //    UARTprintf("value right distance:");
 //    UARTprintf("%u \n", ui32ADC0Value[0]);
+
     return ui32ADC0Value[0];
 }
 uint32_t frontDistance(void){
@@ -494,12 +529,14 @@ void TimerInit(void) {
 
 
 int main(void) {
+	//Set CPU Clock to 40MHz. 400MHz PLL/2 = 200 DIV 4 = 50MHz
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 	// IntMasterEnable();
 	UARTInit(); //Interrupt Driven
 	ADCInit();
 	PWMInit();
-//PID
+
+	//PID
 	TimerInit(); //Interrupt Driven
 
 	SysCtlDelay(20000000);
