@@ -5,7 +5,7 @@
  * Team 6
  * Authors: Robert Duenez, Katherine Perez, Sikender Shahid
  *
- * Milestone 6: Add PID control to robot
+ * Milestone 10: Rewriting of main in RTOS
  *
  */
 
@@ -107,8 +107,8 @@ void distanceBufferLog(int ErrorValue){
 
 
 void PIDStart(void) {
-	// enable Timer0, SubtimerA
-	TimerEnable(TIMER0_BASE, TIMER_A);
+	// enable Timer2, SubtimerA
+	TimerEnable(TIMER2_BASE, TIMER_A);
 	unsigned int speed = 2840;
 	PWMSetSpeed(speed);
 	PWMStart();
@@ -122,12 +122,14 @@ int proportional;
 int last_proportional = 0;
 int derivative;
 int integral = 0;
-const float p_const = 20;
-const int i_const = 3500;
-float d_const = 0.5;
+const float p_const = 15;
+const int i_const = 3000;
+float d_const = 0;
 const int max = 100;
 int dataCollectionToggle = 0;
 int computePID(void){
+
+
 
 	// PID calculations
 	if(frontDistance() > front_target)
@@ -138,6 +140,17 @@ int computePID(void){
 		}
 	}
 
+	if(rightDistance() < 800 )
+	{
+		while(!(rightDistance() > 1350))
+		{
+			move_forward();
+			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
+			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load/2);
+		}
+
+	}
+
 
 	cur_pos = rightDistance();
 	proportional = cur_pos - target_dist;
@@ -145,13 +158,17 @@ int computePID(void){
 	integral += proportional;
 	last_proportional = proportional;
 
+<<<<<<< HEAD:RTOS_Mile_10/empty.c
 	int power_difference = proportional/p_const + integral/i_const;
 	if(lineDetectToggle && dataCollectionToggle){
 	    distanceBufferLog(power_difference);
 	}
 	dataCollectionToggle = 1 - dataCollectionToggle; // or dataCollectionToggle = !dataCollectionToggle;
+=======
+	int power_difference = proportional/p_const + derivative*d_const;
+>>>>>>> 98032a71862d98b35d58e0ac0cf062657a3df056:RTOS_Mile_10/main.c
 
-	//UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
+//	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
 
 	if (power_difference > max)
 		power_difference = max;
@@ -170,31 +187,65 @@ int computePID(void){
 	else {
 		move_forward();
 	}
+<<<<<<< HEAD:RTOS_Mile_10/empty.c
+=======
+
+	blackLineFound();
+
+>>>>>>> 98032a71862d98b35d58e0ac0cf062657a3df056:RTOS_Mile_10/main.c
 	return power_difference;
 }
 
 
-
 /*
- * Timer0 Interrupt Handler
+ * Timer2 Interrupt Handler
  */
 
-bool blackfound = false;
-bool altSecond  = true;
-bool bufferFull	= false;
-uint32_t initialTimerCount,
-         finalTimerCount,
-         blackCount;
+
+uint32_t TimerCount;
 uint32_t i = 0;
 
-uint8_t  blk_thickness = 35;
-uint8_t  boolcount     = 0;
 int buffer[20];
 int error = 0;
 
-void Timer0IntHandler(void) {
+
+
+bool blackLineFound(void)
+{
+
+	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
+
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4|GPIO_PIN_5);
+	SysCtlDelay(100);
+
+	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
+
+	TimerCount = 0;
+
+	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
+	{
+		TimerCount++;
+		if(TimerCount > 450)
+		PWMStop();
+	}
+	//UARTprintf("      Count %d \n", TimerCount);
+
+	if(TimerCount > 250)
+		{
+			//UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
+			return true;
+		}
+	else
+		return false;
+
+
+
+}
+
+
+void Timer2IntHandler(void) {
 	// clear the timer interrupt
-	TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+	TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 	Swi_post(PIDswi);
 
 }
@@ -214,6 +265,7 @@ uint32_t rightDistance(void){
 	ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
 //    UARTprintf("value right distance:");
 //    UARTprintf("%u \n", ui32ADC0Value[0]);
+
     return ui32ADC0Value[0];
 }
 uint32_t frontDistance(void){
@@ -511,12 +563,14 @@ void TimerInit(void) {
 
 
 int main(void) {
+	//Set CPU Clock to 40MHz. 400MHz PLL/2 = 200 DIV 4 = 50MHz
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 	// IntMasterEnable();
 	UARTInit(); //Interrupt Driven
 	ADCInit();
 	PWMInit();
-//PID
+
+	//PID
 	TimerInit(); //Interrupt Driven
 
 	SysCtlDelay(20000000);
