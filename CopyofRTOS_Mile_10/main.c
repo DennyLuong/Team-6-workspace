@@ -40,6 +40,65 @@
 #include "string.h"
 
 /********************************************************************************************************
+ *                                     ADC get_adc_value Functions                                      *
+ ********************************************************************************************************/
+
+uint8_t (*get_adc_value)(void);  // when working on the PID access using function pointer
+uint32_t rightDistance(void){
+    // step 0 - ADC_CTL_CH0
+	uint32_t ui32ADC0Value[4];
+	ADCIntClear(ADC0_BASE, 1);
+	ADCProcessorTrigger(ADC0_BASE, 1);
+	while(!ADCIntStatus(ADC0_BASE, 1, false)){
+	}// wait for conversion to complete
+	ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
+//    UARTprintf("value right distance:");
+//    UARTprintf("%u \n", ui32ADC0Value[0]);
+
+    return ui32ADC0Value[0];
+}
+uint32_t frontDistance(void){
+    // step 1 - ADC_CTL_CH1
+	uint32_t ui32ADC0Value[4];
+	ADCIntClear(ADC0_BASE, 2);
+	ADCProcessorTrigger(ADC0_BASE, 2);
+	while(!ADCIntStatus(ADC0_BASE, 2, false)){
+	}// wait for conversion to complete
+	ADCSequenceDataGet(ADC0_BASE, 2, ui32ADC0Value);
+
+//    UARTprintf("value front distance:");
+//    UARTprintf("%u \n", ui32ADC0Value[0]);
+
+   return ui32ADC0Value[0];
+}
+uint8_t rightReflection(void){
+    // step 2 - ADC_CTL_CH8
+    UARTprintf("value right reflection:");
+    uint8_t value = ADC(1);
+
+    UARTprintf("%u \n", value);
+    return value;
+}
+
+uint8_t leftReflection(void){
+    // step 3 - ADC_CTL_CH9
+    UARTprintf("value left reflection:");
+    uint8_t value = ADC(2);
+    UARTprintf("%u \n", value);
+    return value;
+}
+
+uint8_t ADC(uint8_t value){
+    uint32_t ui32ADC0Value[4];
+    ADCIntClear(ADC0_BASE, 1);
+    ADCProcessorTrigger(ADC0_BASE, 1);
+    while(!ADCIntStatus(ADC0_BASE, 1, false)){
+    }// wait for conversion to complete
+    ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
+    return ui32ADC0Value[value];
+}
+
+/********************************************************************************************************
  *                                             PWM Functions                                            *
  ********************************************************************************************************/
 #define PWM_FREQUENCY 10000
@@ -119,103 +178,72 @@ void PIDStart(void) {
 	PWMStart();
 	move_forward();
 }
-unsigned int RM, LM;
+
 const uint32_t front_target = 2200;
 uint32_t cur_pos;
 const uint32_t target_dist = 2000;
-int proportional;
+int proportional =0;
 int last_proportional = 0;
-int derivative;
+int derivative = 0;
 int integral = 0;
-const float p_const = 1;
-const int i_const =  10000;
-float d_const = 0 ;//1.5;
+const float p_const = 10;
+const float i_const =  3500;
+const float d_const = .0075;
 const int max = 100;
 int dataCollectionToggle = 0;
+int power_difference = 0;
 bool lineDetectToggle= 0; // needs to be reflection sensor
 int computePID(void){
-
-
 	if(blackLineFound()){
 		lineDetectToggle = !(lineDetectToggle);
 	}
 
 	// PID calculations
-//	if(frontDistance() > front_target)
-//	{
-//		while (!(frontDistance() < 800)) {
-//			move_ccw();
-//			PWMSetSpeed(80, 80);
-//		}
-//	}
-
-	if(rightDistance() < 800 )
-	{
-		while(!(rightDistance() > 1500))
-		{
-			move_forward();
-			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
-			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load/2);
-		}
-
-	}
-
-
 	cur_pos = rightDistance();
 	proportional = cur_pos - target_dist;
 	derivative = proportional - last_proportional;
 	integral += proportional;
 	last_proportional = proportional;
 
-	int power_difference = proportional/p_const ;//+ integral/i_const + derivative * d_const;
+	power_difference = proportional/p_const + derivative * d_const + integral/i_const;
 
 	if(lineDetectToggle && dataCollectionToggle){
 	    distanceBufferLog(power_difference);
 	}
 	dataCollectionToggle = 1 - dataCollectionToggle; // or dataCollectionToggle = !dataCollectionToggle;
 
-//	UARTprintf("Current Position: %u Proportional: %d Power Difference: %d\n", cur_pos, proportional, power_difference);
+	if (power_difference > max){
+		power_difference = max;}
+	if (power_difference < -max){
+		power_difference = -max;}
 
-	if (power_difference > max)
-		power_difference = max;
-	if (power_difference < -max)
-		power_difference = -max;
+//	UARTprintf("Power Difference: %d\n",power_difference);
 
-
-	  if(power_difference < 0)
-		  PWMSetSpeed(max+power_difference, max);
-	  else if (power_difference == max)
-		  PWMSetSpeed(max, max-power_difference);
-	  else
+	  if(power_difference < 0){
+		  PWMSetSpeed(max, 101 + power_difference);
+	  }
+	  else if(power_difference > 0){
+		  PWMSetSpeed(max + 1 -power_difference, max);
+	  }
+	  else{
+		  PWMSetSpeed(max, max);
+	  }
+	  //front_target = 2200
+	  if(frontDistance() > front_target){
+		  while (!(frontDistance() < 1500))
+	  			move_cw();
 		  move_forward();
+	  }
 
-
-
-
-
-//	if (power_difference < 0) {
-//		//move_cw();
-//		// ADD THE DIFFERENCE TO THE LEFT MOTOR AND SUBTRACTED FROM RIGHT MOTOR
-//		RM = 80 - power_difference;
-//		LM = 80 + power_difference;
-//
-//		if(LM <= 0 )
-//			LM = 1;
-//
-//		if(RM >= max)
-//			RM = max;
-//
-//		UARTprintf("POWER DIFFERENCE: %d\n",power_difference);
-//		PWMSetSpeed(LM, RM);
-//	}
-//	else if (power_difference == max) {
-//		//move_ccw();
-//		PWMSetSpeed(150 - power_difference, 100);
-//	}
-//	else {
-//		move_forward();
-//	}
-
+	  if(rightDistance() < 800 )
+	  {
+		  while(!(rightDistance() > 2400))
+	  		{
+	  			move_forward();
+	  			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, ui32Load);
+	  			PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, ui32Load/2);
+	  		}
+	  	}
 	return power_difference;
 }
 
@@ -238,33 +266,33 @@ bool blackLineFound(void)
 
 	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
 
-	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4|GPIO_PIN_5);
-	SysCtlDelay(100);
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_4|GPIO_PIN_5);
+	SysCtlDelay(500);
 
 	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
 
 	TimerCount = 0;
 
+
+
 	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
 	{
 		TimerCount++;
-		if(TimerCount > 380) {
+		if(TimerCount > 1400) {
+			UARTprintf("Stop at timer count %d \n", TimerCount);
 			PWMStop();
 			return false;
 		}
 	}
 	//UARTprintf("      Count %d \n", TimerCount);
 
-	if(TimerCount > 200)
+	if(TimerCount > 1000)
 		{
-			//UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
+			UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
 			return true;
 		}
 	else
 		return false;
-
-
-
 }
 
 
@@ -275,63 +303,6 @@ void Timer2IntHandler(void) {
 
 }
 
-/********************************************************************************************************
- *                                     ADC get_adc_value Functions                                      *
- ********************************************************************************************************/
-
-uint8_t (*get_adc_value)(void);  // when working on the PID access using function pointer
-uint32_t rightDistance(void){
-    // step 0 - ADC_CTL_CH0
-	uint32_t ui32ADC0Value[4];
-	ADCIntClear(ADC0_BASE, 1);
-	ADCProcessorTrigger(ADC0_BASE, 1);
-	while(!ADCIntStatus(ADC0_BASE, 1, false)){
-	}// wait for conversion to complete
-	ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
-//    UARTprintf("value right distance:");
-//    UARTprintf("%u \n", ui32ADC0Value[0]);
-
-    return ui32ADC0Value[0];
-}
-uint32_t frontDistance(void){
-    // step 1 - ADC_CTL_CH1
-	uint32_t ui32ADC0Value[4];
-	ADCIntClear(ADC0_BASE, 2);
-	ADCProcessorTrigger(ADC0_BASE, 2);
-	while(!ADCIntStatus(ADC0_BASE, 2, false)){
-	}// wait for conversion to complete
-	ADCSequenceDataGet(ADC0_BASE, 2, ui32ADC0Value);
-
-//    UARTprintf("value front distance:");
-//    UARTprintf("%u \n", ui32ADC0Value[0]);
-
-   return ui32ADC0Value[0];
-}
-uint8_t rightReflection(void){
-    // step 2 - ADC_CTL_CH8
-    UARTprintf("value right reflection:");
-    uint8_t value = ADC(1);
-    UARTprintf("%u \n", value);
-    return value;
-}
-
-uint8_t leftReflection(void){
-    // step 3 - ADC_CTL_CH9
-    UARTprintf("value left reflection:");
-    uint8_t value = ADC(2);
-    UARTprintf("%u \n", value);
-    return value;
-}
-
-uint8_t ADC(uint8_t value){
-    uint32_t ui32ADC0Value[4];
-    ADCIntClear(ADC0_BASE, 1);
-    ADCProcessorTrigger(ADC0_BASE, 1);
-    while(!ADCIntStatus(ADC0_BASE, 1, false)){
-    }// wait for conversion to complete
-    ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
-    return ui32ADC0Value[value];
-}
 /********************************************************************************************************
  *                                     UART Handler and Command Functions                               *
  ********************************************************************************************************/
@@ -582,16 +553,11 @@ void TimerInit(void) {
 int main(void) {
 	//Set CPU Clock to 40MHz. 400MHz PLL/2 = 200 DIV 4 = 50MHz
 	SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-	// IntMasterEnable();
-	UARTInit(); //Interrupt Driven
+
+	UARTInit();
 	ADCInit();
 	PWMInit();
-
-	//PID
-	TimerInit(); //Interrupt Driven
-
-//	IntEnable(INT_UART1);
-//	UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT);
+	TimerInit();
 
 	UARTprintf("Embedded Systems - TEAM 6\r\n");
 	UARTprintf("Type command:");
