@@ -36,68 +36,30 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/timer.h"
 #include "driverlib/uart.h"
-#include "utils/uartstdio.h"
+#include "utils/uartstdio.c"
 #include "string.h"
 
 /********************************************************************************************************
  *                                     ADC get_adc_value Functions                                      *
  ********************************************************************************************************/
-
-uint8_t (*get_adc_value)(void);  // when working on the PID access using function pointer
 uint32_t rightDistance(void){
-    // step 0 - ADC_CTL_CH0
+    //ADC_CTL_CH0
 	uint32_t ui32ADC0Value[4];
 	ADCIntClear(ADC0_BASE, 1);
 	ADCProcessorTrigger(ADC0_BASE, 1);
-	while(!ADCIntStatus(ADC0_BASE, 1, false)){
-	}// wait for conversion to complete
+	while(!ADCIntStatus(ADC0_BASE, 1, false)){}
 	ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
-//    UARTprintf("value right distance:");
-//    UARTprintf("%u \n", ui32ADC0Value[0]);
-
     return ui32ADC0Value[0];
 }
 uint32_t frontDistance(void){
-    // step 1 - ADC_CTL_CH1
+    //ADC_CTL_CH1
 	uint32_t ui32ADC0Value[4];
 	ADCIntClear(ADC0_BASE, 2);
 	ADCProcessorTrigger(ADC0_BASE, 2);
-	while(!ADCIntStatus(ADC0_BASE, 2, false)){
-	}// wait for conversion to complete
+	while(!ADCIntStatus(ADC0_BASE, 2, false)){}
 	ADCSequenceDataGet(ADC0_BASE, 2, ui32ADC0Value);
-
-//    UARTprintf("value front distance:");
-//    UARTprintf("%u \n", ui32ADC0Value[0]);
-
-   return ui32ADC0Value[0];
+    return ui32ADC0Value[0];
 }
-uint8_t rightReflection(void){
-    // step 2 - ADC_CTL_CH8
-    UARTprintf("value right reflection:");
-    uint8_t value = ADC(1);
-
-    UARTprintf("%u \n", value);
-    return value;
-}
-
-uint8_t leftReflection(void){
-    // step 3 - ADC_CTL_CH9
-    UARTprintf("value left reflection:");
-    uint8_t value = ADC(2);
-    UARTprintf("%u \n", value);
-    return value;
-}
-
-uint8_t ADC(uint8_t value){
-    uint32_t ui32ADC0Value[4];
-    ADCIntClear(ADC0_BASE, 1);
-    ADCProcessorTrigger(ADC0_BASE, 1);
-    while(!ADCIntStatus(ADC0_BASE, 1, false)){
-    }// wait for conversion to complete
-    ADCSequenceDataGet(ADC0_BASE, 1, ui32ADC0Value);
-    return ui32ADC0Value[value];
-}
-
 /********************************************************************************************************
  *                                             PWM Functions                                            *
  ********************************************************************************************************/
@@ -143,32 +105,85 @@ void PWMSetSpeed(unsigned int left_adjust, unsigned int right_adjust){
     PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, left_adjust * ui32Load/100);
     PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, right_adjust * ui32Load/100);
 }
-
 /********************************************************************************************************
- *                                       PID Control Functions                                          *
+ *                                          Double Buffer                                               *
  ********************************************************************************************************/
+
 char distanceBuffer[20];
-//char distanceBuffer2[20];
-char* distanceBufferPtr = &distanceBuffer;
+char distanceBuffer2[20];
 int distanceBufferCount = 0;
-
-
 void distanceBufferLog(int ErrorValue){
     if(distanceBufferCount != 20){
-        *distanceBufferPtr++= ErrorValue;
+        distanceBuffer[distanceBufferCount] = ErrorValue;
         distanceBufferCount++;
     }
     else{
-      //  UARTprintf(distanceBuffer, 20);
         for(distanceBufferCount = 0 ; distanceBufferCount <20 ; distanceBufferCount++){
             UARTprintf("%d", distanceBuffer[distanceBufferCount]);
             UARTprintf("\n");
         }
+        swap(distanceBuffer, distanceBuffer2);
         distanceBufferCount = 0;
-        memset(distanceBufferPtr, 0, 20);
     }
 }
 
+void swap(char * buffer1 , char * buffer2 ){
+    char * temp = buffer1;
+    buffer1 = buffer2;
+    buffer2 = temp;
+}
+
+/********************************************************************************************************
+ *                                       PID Control Functions                                          *
+ ********************************************************************************************************/
+uint32_t initialCount, finalCount, count1;
+bool blackLineFound(void)
+{
+
+
+//  while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
+//  {
+//      TimerCount++;
+//      if(TimerCount > 1400) {
+//          UARTprintf("Stop at timer count %d \n", TimerCount);
+//          PWMStop();
+//          return false;
+//      }
+//  }
+    //UARTprintf("      Count %d \n", TimerCount);
+
+//  if(TimerCount > 1000)
+//      {
+//          UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
+//          return true;
+//      }
+//  else
+//      return false;
+    ///////
+    TimerDisable(TIMER2_BASE, TIMER_A);
+    TimerEnable(TIMER0_BASE,TIMER_BOTH);
+    GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4 );
+    GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4  , GPIO_PIN_4  );
+    SysCtlDelay(100);
+    GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4  );
+    count1 = 0;
+    initialCount = TimerValueGet(TIMER0_BASE, TIMER_A);
+    while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4 )){
+    };
+    finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
+    count1 = finalCount - initialCount;
+    UARTprintf("count %u \n", count1);
+    if (count1 >= 10000){
+        PWMStop();
+        return false;
+    }
+//    if (count1 >= 600 && count1 <10000){
+//        return true;
+//    }
+    TimerDisable(TIMER0_BASE, TIMER_BOTH);
+    TimerEnable(TIMER2_BASE, TIMER_A);
+    return false;
+}
 
 void PIDStart(void) {
 	// enable Timer2, SubtimerA
@@ -192,7 +207,8 @@ const float d_const = .0075;
 const int max = 100;
 int dataCollectionToggle = 0;
 int power_difference = 0;
-bool lineDetectToggle= 0; // needs to be reflection sensor
+bool lineDetectToggle= 0;
+
 int computePID(void){
 	if(blackLineFound()){
 		lineDetectToggle = !(lineDetectToggle);
@@ -248,80 +264,20 @@ int computePID(void){
 }
 
 
-/*
- * Timer2 Interrupt Handler
- */
 
-
-uint32_t TimerCount;
-uint32_t i = 0;
-
-int buffer[20];
-int error = 0;
-
-
-
-bool blackLineFound(void)
-{
-
-	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
-
-	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5, GPIO_PIN_4|GPIO_PIN_5);
-	SysCtlDelay(500);
-
-	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4|GPIO_PIN_5);
-
-	TimerCount = 0;
-
-
-
-	while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
-	{
-		TimerCount++;
-		if(TimerCount > 1400) {
-			UARTprintf("Stop at timer count %d \n", TimerCount);
-			PWMStop();
-			return false;
-		}
-	}
-	//UARTprintf("      Count %d \n", TimerCount);
-
-	if(TimerCount > 1000)
-		{
-			UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
-			return true;
-		}
-	else
-		return false;
-}
-
+/********************************************************************************************************
+ *                                     Timer2 Interrupt Handler                                         *
+ ********************************************************************************************************/
 
 void Timer2IntHandler(void) {
-	// clear the timer interrupt
 	TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 	Swi_post(PIDswi);
-
 }
 
 /********************************************************************************************************
  *                                     UART Handler and Command Functions                               *
  ********************************************************************************************************/
 
-void UARTIntHandler(void)
-{
-    char characters[2] = " ";
-    char function = 0;
-    uint32_t ui32Status;
-    //get interrupt status
-    ui32Status = UARTIntStatus(UART1_BASE, true);
-    //clear the asserted interrupts
-    UARTIntClear(UART1_BASE, ui32Status);
-    UARTgets(characters, 3);
-    UARTprintf("\n");
-    function = responseGet(characters);
-    getFunction(function);
-    UARTprintf("Enter Command: ");
-}
 
 typedef enum{
     HH=0,
@@ -339,7 +295,8 @@ typedef enum{
     DS=24,
     ES=26,
     DC=28,
-    ER=30
+    ER=30,
+    BL=32
 }Commands;
 
 uint8_t CharacterCount = 0;
@@ -361,7 +318,8 @@ char responseGet(char chars[]){
             "DS", " Post Drive Semaphore      ",
             "ES", " Emergency Stop            ",
             "DC", " Drive Clock Start         ",
-            "ER", " Error                     "
+            "ER", " Error                     ",
+            "BL", " Black Line                ",
     };
 
     char index = 0;
@@ -395,19 +353,16 @@ char responseGet(char chars[]){
         index = ES;
     else if(!strcmp(chars,"DC"))
         index = DC;
+    else if(!strcmp(chars,"BL"))
+        index = BL;
     else
         index = ER;
 
     UARTprintf("\n");
     UARTprintf(LookupTable[index]);
-
-    UARTCharPut(UART1_BASE, 0x20);  // space
-
+    UARTCharPut(UART1_BASE, 0x20);
     UARTprintf(LookupTable[index + 1]);
-    UARTCharPut(UART1_BASE, 0x20);  // space
-    UARTCharPut(UART1_BASE, 0x0D);  // ??
-    UARTCharPut(UART1_BASE, 0x0A);  // ??
-
+    UARTprintf(" \r\n");
     return index;
 }
 
@@ -416,8 +371,6 @@ void getFunction(char function){
     case R1:
         rightDistance();
         frontDistance();
-        //rightReflection();
-        //leftReflection();
         break;
     case MF:
     	move_forward();
@@ -439,12 +392,30 @@ void getFunction(char function){
         break;
     case GO:
         PIDStart();
-        //computePID();
+        break;
+    case BL:
+        blackLineFound();
         break;
     default:
         UARTprintf("Error \n");
         break;
     }
+}
+
+
+void UARTIntHandler(void)
+{
+    char characters[2] = " ";
+    char function = 0;
+    uint32_t ui32Status;
+    //get interrupt status
+    ui32Status = UARTIntStatus(UART1_BASE, true);
+    //clear the asserted interrupts
+    UARTIntClear(UART1_BASE, ui32Status);
+    UARTgets(characters, 3);
+    function = responseGet(characters);
+    getFunction(function);
+    UARTprintf("Enter Command: ");
 }
 /********************************************************************************************************
  *                                     Interface Initialization Functions                               *
@@ -477,7 +448,7 @@ void ADCInit(void) {
 
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-	//GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2 | GPIO_PIN_5 | GPIO_PIN_4);
+
 	GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2);
 
 	ADCSequenceConfigure(ADC0_BASE, 1, ADC_TRIGGER_PROCESSOR, 0);
@@ -486,8 +457,7 @@ void ADCInit(void) {
 
 	ADCSequenceStepConfigure(ADC0_BASE, 1, 0, ADC_CTL_CH0 | ADC_CTL_END | ADC_CTL_IE);
 	ADCSequenceStepConfigure(ADC0_BASE, 2, 0, ADC_CTL_CH1 | ADC_CTL_END | ADC_CTL_IE);
-	//ADCSequenceStepConfigure(ADC0_BASE, 1, 1, ADC_CTL_CH8 );
-	//ADCSequenceStepConfigure(ADC0_BASE, 1, 2, ADC_CTL_CH9  | ADC_CTL_END |ADC_CTL_IE);
+
 	ADCSequenceEnable(ADC0_BASE, 1);
 	ADCSequenceEnable(ADC0_BASE, 2);
 }
@@ -537,13 +507,13 @@ void TimerInit(void) {
 	uint32_t ui32Period;
 
 	SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
+	SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
 	// enable timer0 as 32-bit timer in periodic mode
-	TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
-
+	TimerConfigure(TIMER2_BASE, TIMER_CFG_A_PERIODIC);
+	TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC_UP);
 	// Interrupt at 20Hz
 	ui32Period = (SysCtlClockGet() / 20);
 	TimerLoadSet(TIMER2_BASE, TIMER_A, ui32Period-1);
-
 	// enable timer2a interrupt vector
 	IntEnable(INT_TIMER2A);
 	// enable specific vector within timer to generate an interrupt
