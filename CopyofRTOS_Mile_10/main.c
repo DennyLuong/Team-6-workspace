@@ -173,7 +173,7 @@ bool blackLineFound(void)
     finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
     count1 = finalCount - initialCount;
     UARTprintf("count %u \n", count1);
-    if (count1 >= 10000){
+    if (count1 >= 10000 && count1 <= 15000){
         PWMStop();
         return false;
     }
