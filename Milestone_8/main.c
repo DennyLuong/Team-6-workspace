@@ -9,7 +9,7 @@
 #include "driverlib/timer.h"
 
 
-uint32_t initialCount,
+uint32_t initialTime,
          finalCount,
          count1,
 		 count2;
@@ -47,13 +47,13 @@ int main(void)
 
         GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4);
 
-        initialCount = TimerValueGet(TIMER0_BASE, TIMER_A);
+        initialTime = TimerValueGet(TIMER0_BASE, TIMER_A);
 
         while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) != 0){};
 
         finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
 
-        count1 = finalCount - initialCount;
+        count1 = finalCount - initialTime;
 
         GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_5);
 
@@ -63,13 +63,13 @@ int main(void)
 
         GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_5);
 
-        initialCount = TimerValueGet(TIMER0_BASE, TIMER_A);
+        initialTime = TimerValueGet(TIMER0_BASE, TIMER_A);
 
         while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) != 0){};
 
         finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
 
-        count2 = finalCount - initialCount;
+        count2 = finalCount - initialTime;
 
 
     }

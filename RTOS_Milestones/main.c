@@ -85,13 +85,18 @@ void move_ccw(void){
     GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2|GPIO_PIN_7, GPIO_PIN_7|0);
 }
 
-void PWMStart(void){
-	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
-	PWMSetSpeed(ui32Load, ui32Load);
-}
-
 void PWMStop(void){
 	PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), false);
+}
+
+void PWMSetSpeed(unsigned int left_adjust, unsigned int right_adjust){
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, left_adjust * ui32Load/100);
+    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, right_adjust * ui32Load/100);
+}
+
+void PWMStart(void){
+    PWMOutputState(PWM1_BASE, (PWM_OUT_0_BIT|PWM_OUT_1_BIT), true);
+    PWMSetSpeed(ui32Load, ui32Load);
 }
 
 void PWMUserSetSpeed(void){
@@ -100,14 +105,14 @@ void PWMUserSetSpeed(void){
 	UARTgets(inSpeed, 4);
 	PWMSetSpeed(atoi(inSpeed), atoi(inSpeed));
 }
-
-void PWMSetSpeed(unsigned int left_adjust, unsigned int right_adjust){
-    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, left_adjust * ui32Load/100);
-    PWMPulseWidthSet(PWM1_BASE, PWM_OUT_1, right_adjust * ui32Load/100);
-}
 /********************************************************************************************************
  *                                          Double Buffer                                               *
  ********************************************************************************************************/
+void swap(char * buffer1 , char * buffer2 ){
+    char * temp = buffer1;
+    buffer1 = buffer2;
+    buffer2 = temp;
+}
 
 char distanceBuffer[20];
 char distanceBuffer2[20];
@@ -127,41 +132,15 @@ void distanceBufferLog(int ErrorValue){
     }
 }
 
-void swap(char * buffer1 , char * buffer2 ){
-    char * temp = buffer1;
-    buffer1 = buffer2;
-    buffer2 = temp;
-}
-
 /********************************************************************************************************
  *                                       PID Control Functions                                          *
  ********************************************************************************************************/
-uint32_t initialCount, finalCount, count1, avgCount;
-uint32_t iterQRT[5] = {0,0,0,0,0};
+uint32_t time = 0;
+uint32_t previousTimeRead = 0;
+uint32_t initialTime, initialLine, finalLine, thresholdBlackLine;
 
 bool blackLineFound(void)
 {
-
-
-//  while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
-//  {
-//      TimerCount++;
-//      if(TimerCount > 1400) {
-//          UARTprintf("Stop at timer count %d \n", TimerCount);
-//          PWMStop();
-//          return false;
-//      }
-//  }
-    //UARTprintf("      Count %d \n", TimerCount);
-
-//  if(TimerCount > 1000)
-//      {
-//          UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
-//          return true;
-//      }
-//  else
-//      return false;
-    ///////
     TimerDisable(TIMER2_BASE, TIMER_A);
     SysCtlDelay(100);
     TimerEnable(TIMER0_BASE,TIMER_BOTH);
@@ -169,33 +148,34 @@ bool blackLineFound(void)
     GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4  , GPIO_PIN_4  );
     SysCtlDelay(100);
     GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4  );
-    count1 = 0;
-    initialCount = TimerValueGet(TIMER0_BASE, TIMER_A);
-    while( TimerValueGet(TIMER0_BASE, TIMER_A) - < ){
-        if(GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_4)){
+    initialTime = TimerValueGet(TIMER0_BASE, TIMER_A);
+    while(GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_4)){};
+    time = TimerValueGet(TIMER0_BASE, TIMER_A) - initialTime;
 
-        }
-    };
-    finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
-    count1 = finalCount - initialCount;
-    iterQRT[4] = iterQRT[3];
-    iterQRT[3] = iterQRT[2];
-    iterQRT[2] = iterQRT[1];
-    iterQRT[1] = iterQRT[0];
-    iterQRT[0] = count1;
-
-    avgCount = ( iterQRT[4]+ iterQRT[3] + iterQRT[2] + iterQRT[1] + iterQRT[0] ) / 5;
-
-    UARTprintf("avgCount %u \n", avgCount);
-    if (avgCount >= 7000) {
-        PWMStop();
-        return false;
+    //white noise handle
+    if(time < 400){
+        time = 0;
     }
-    else if (avgCount >= 1000 && avgCount < 3000) {
-    //	UARTprintf("Toggle flag at count %u \n", avgCount);
-    	TimerDisable(TIMER0_BASE, TIMER_BOTH);
-    	TimerEnable(TIMER2_BASE, TIMER_A);
-    	return true;
+    //first detection of black line
+    if(time - previousTimeRead > 0 && initialLine == 0)
+        initialLine = time;
+
+    //detection of black line decreasing
+    if(time - previousTimeRead < 0)
+        finalLine = time;
+
+    //thresholding value
+    thresholdBlackLine = finalLine - initialLine;
+
+    //threshold action
+    UARTprintf("thresholding black line value : %u\n",thresholdBlackLine);
+
+    // clearing out values after black line detection
+    previousTimeRead = time;
+    if(previousTimeRead == 0 && time == 0){
+        initialLine = 0;
+        finalLine = 0;
+        thresholdBlackLine = 0;
     }
     TimerDisable(TIMER0_BASE, TIMER_BOTH);
     SysCtlDelay(100);

@@ -136,7 +136,7 @@ void swap(char * buffer1 , char * buffer2 ){
 /********************************************************************************************************
  *                                       PID Control Functions                                          *
  ********************************************************************************************************/
-uint32_t initialCount, finalCount, count1;
+uint32_t initialTime, finalCount, count1;
 bool blackLineFound(void)
 {
 
@@ -167,11 +167,11 @@ bool blackLineFound(void)
     SysCtlDelay(100);
     GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4  );
     count1 = 0;
-    initialCount = TimerValueGet(TIMER0_BASE, TIMER_A);
+    initialTime = TimerValueGet(TIMER0_BASE, TIMER_A);
     while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4 )){
     };
     finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
-    count1 = finalCount - initialCount;
+    count1 = finalCount - initialTime;
     UARTprintf("count %u \n", count1);
     if (count1 >= 10000){
         PWMStop();
