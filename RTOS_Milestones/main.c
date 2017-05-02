@@ -171,7 +171,10 @@ bool blackLineFound(void)
     GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4  );
     count1 = 0;
     initialCount = TimerValueGet(TIMER0_BASE, TIMER_A);
-    while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4 )){
+    while( TimerValueGet(TIMER0_BASE, TIMER_A) - < ){
+        if(GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_4)){
+
+        }
     };
     finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
     count1 = finalCount - initialCount;
@@ -277,8 +280,6 @@ int computePID(void){
 	  	}
 	return power_difference;
 }
-
-
 
 /********************************************************************************************************
  *                                     Timer2 Interrupt Handler                                         *
