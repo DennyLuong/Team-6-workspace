@@ -16,7 +16,7 @@ BIOS_INC  = -I"C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/"
 
 TARGET_INC = -I"C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/"
 
-INCS = $(BIOS_INC) $(TARGET_INC)  --include_path="C:/Users/robertduenez/Documents/GitHub/Team-6-workspace/CopyofRTOS_Mile_10" --include_path="C:/ti/tirtos_tivac_2_16_00_08/products/TivaWare_C_Series-2.1.1.71b" --include_path="C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/posix" --include_path="C:/Users/robertduenez/Downloads/ti-cgt-arm_16.12.0.STS/include" 
+INCS = $(BIOS_INC) $(TARGET_INC)  --include_path="C:/Users/robertduenez/Documents/GitHub/Team-6-workspace/RTOS_Milestones" --include_path="C:/ti/tirtos_tivac_2_16_00_08/products/TivaWare_C_Series-2.1.1.71b" --include_path="C:/ti/tirtos_tivac_2_16_00_08/products/bios_6_45_01_29/packages/ti/sysbios/posix" --include_path="C:/Users/robertduenez/Downloads/ti-cgt-arm_16.12.0.STS/include" 
 
 CC = C:/Users/robertduenez/Downloads/ti-cgt-arm_16.12.0.STS/bin/armcl -c $(CCOPTS) -I C:/Users/robertduenez/Downloads/ti-cgt-arm_16.12.0.STS/include
 ASM = C:/Users/robertduenez/Downloads/ti-cgt-arm_16.12.0.STS/bin/armcl -c $(CCOPTS) -I C:/Users/robertduenez/Downloads/ti-cgt-arm_16.12.0.STS/include

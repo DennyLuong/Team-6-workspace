@@ -136,7 +136,9 @@ void swap(char * buffer1 , char * buffer2 ){
 /********************************************************************************************************
  *                                       PID Control Functions                                          *
  ********************************************************************************************************/
-uint32_t initialCount, finalCount, count1;
+uint32_t initialCount, finalCount, count1, avgCount;
+uint32_t iterQRT[5] = {0,0,0,0,0};
+
 bool blackLineFound(void)
 {
 
@@ -161,6 +163,7 @@ bool blackLineFound(void)
 //      return false;
     ///////
     TimerDisable(TIMER2_BASE, TIMER_A);
+    SysCtlDelay(100);
     TimerEnable(TIMER0_BASE,TIMER_BOTH);
     GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4 );
     GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4  , GPIO_PIN_4  );
@@ -172,15 +175,27 @@ bool blackLineFound(void)
     };
     finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
     count1 = finalCount - initialCount;
-    UARTprintf("count %u \n", count1);
-    if (count1 >= 10000){
+    iterQRT[4] = iterQRT[3];
+    iterQRT[3] = iterQRT[2];
+    iterQRT[2] = iterQRT[1];
+    iterQRT[1] = iterQRT[0];
+    iterQRT[0] = count1;
+
+    avgCount = ( iterQRT[4]+ iterQRT[3] + iterQRT[2] + iterQRT[1] + iterQRT[0] ) / 5;
+
+    UARTprintf("avgCount %u \n", avgCount);
+    if (avgCount >= 7000) {
         PWMStop();
         return false;
     }
-//    if (count1 >= 600 && count1 <10000){
-//        return true;
-//    }
+    else if (avgCount >= 1000 && avgCount < 3000) {
+    //	UARTprintf("Toggle flag at count %u \n", avgCount);
+    	TimerDisable(TIMER0_BASE, TIMER_BOTH);
+    	TimerEnable(TIMER2_BASE, TIMER_A);
+    	return true;
+    }
     TimerDisable(TIMER0_BASE, TIMER_BOTH);
+    SysCtlDelay(100);
     TimerEnable(TIMER2_BASE, TIMER_A);
     return false;
 }
