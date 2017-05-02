@@ -138,6 +138,7 @@ void swap(char * buffer1 , char * buffer2 ){
  ********************************************************************************************************/
 uint32_t initialCount, finalCount, count1, avgCount;
 uint32_t iterQRT[5] = {0,0,0,0,0};
+uint8_t resetCount = 0;
 
 bool blackLineFound(void)
 {
@@ -175,13 +176,30 @@ bool blackLineFound(void)
     };
     finalCount = TimerValueGet(TIMER0_BASE, TIMER_A);
     count1 = finalCount - initialCount;
-    iterQRT[4] = iterQRT[3];
-    iterQRT[3] = iterQRT[2];
-    iterQRT[2] = iterQRT[1];
-    iterQRT[1] = iterQRT[0];
-    iterQRT[0] = count1;
 
-    avgCount = ( iterQRT[4]+ iterQRT[3] + iterQRT[2] + iterQRT[1] + iterQRT[0] ) / 5;
+    if (count1 < 400) {
+    	count1 = 0;
+    }
+    if (count1 > 8000) {
+    	count1 = 8000;
+    }
+
+    if(resetCount < 3) {
+		//iterQRT[4] = iterQRT[3];
+		//iterQRT[3] = iterQRT[2];
+		iterQRT[2] = iterQRT[1];
+		iterQRT[1] = iterQRT[0];
+		iterQRT[0] = count1;
+		++resetCount;
+    }
+    else {
+    	iterQRT[2] = 0;
+		iterQRT[1] = 0;
+		iterQRT[0] = 0;
+		resetCount = 0;
+    }
+
+    avgCount = ( iterQRT[2] + iterQRT[1] + iterQRT[0] ) / 3;
 
     UARTprintf("avgCount %u \n", avgCount);
     if (avgCount >= 7000) {
