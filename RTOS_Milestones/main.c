@@ -139,7 +139,7 @@ uint32_t time = 0;
 uint32_t previousTimeRead = 0;
 uint32_t initialTime, initialLine, finalLine, thresholdBlackLine;
 int blackLineWidth = 0;
-bool blackLineFound(void)
+void blackLineFound(bool blackLineToggle)
 {
     TimerDisable(TIMER2_BASE, TIMER_A);
     SysCtlDelay(100);
@@ -169,8 +169,7 @@ bool blackLineFound(void)
     //threshold action
     if(thresholdBlackLine!= 0){
             blackLineWidth++;
-            UARTprintf("thresholding black line value : %u\n",thresholdBlackLine);
-        }
+    }
     if(thresholdBlackLine == 0){
         blackLineWidth = 0;
     }
@@ -178,7 +177,7 @@ bool blackLineFound(void)
         PWMStop();
     }
     if (blackLineWidth > 2){
-        UARTprintf("Passed blackLine\n");
+        blackLineToggle = !(blackLineToggle);
     }
     // clearing out values after black line detection
     previousTimeRead = time;
@@ -191,7 +190,6 @@ bool blackLineFound(void)
     TimerDisable(TIMER0_BASE, TIMER_BOTH);
     SysCtlDelay(100);
     TimerEnable(TIMER2_BASE, TIMER_A);
-    return false;
 }
 
 void PIDStart(void) {
@@ -219,10 +217,10 @@ int power_difference = 0;
 bool lineDetectToggle= 0;
 
 int computePID(void){
-	if(blackLineFound()){
-		lineDetectToggle = !(lineDetectToggle);
-	}
-
+//	if(blackLineFound()){
+//		lineDetectToggle = !(lineDetectToggle);
+//	}
+	blackLineFound(&lineDetectToggle);
 	// PID calculations
 	cur_pos = rightDistance();
 	proportional = cur_pos - target_dist;
@@ -401,7 +399,6 @@ void getFunction(char function){
         PIDStart();
         break;
     case BL:
-        blackLineFound();
         break;
     default:
         UARTprintf("Error \n");
