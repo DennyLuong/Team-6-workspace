@@ -139,30 +139,12 @@ void swap(char * buffer1 , char * buffer2 ){
 uint32_t initialCount, finalCount, count1, avgCount;
 uint32_t iterQRT[5] = {0,0,0,0,0};
 uint8_t resetCount = 0;
+uint32_t threshold = 0;
+
 
 bool blackLineFound(void)
 {
 
-
-//  while(GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_4) > 0 || GPIOPinRead(GPIO_PORTE_BASE, GPIO_PIN_5) > 0)
-//  {
-//      TimerCount++;
-//      if(TimerCount > 1400) {
-//          UARTprintf("Stop at timer count %d \n", TimerCount);
-//          PWMStop();
-//          return false;
-//      }
-//  }
-    //UARTprintf("      Count %d \n", TimerCount);
-
-//  if(TimerCount > 1000)
-//      {
-//          UARTprintf("FLAG TOGGLE %d \n\n", TimerCount);
-//          return true;
-//      }
-//  else
-//      return false;
-    ///////
     TimerDisable(TIMER2_BASE, TIMER_A);
     SysCtlDelay(100);
     TimerEnable(TIMER0_BASE,TIMER_BOTH);
@@ -180,8 +162,8 @@ bool blackLineFound(void)
     if (count1 < 400) {
     	count1 = 0;
     }
-    if (count1 > 8000) {
-    	count1 = 8000;
+    if (count1 > 5000) {
+    	count1 = 5000;
     }
 
     if(resetCount < 3) {
