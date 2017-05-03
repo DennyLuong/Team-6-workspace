@@ -138,7 +138,7 @@ void distanceBufferLog(int ErrorValue){
 uint32_t time = 0;
 uint32_t previousTimeRead = 0;
 uint32_t initialTime, initialLine, finalLine, thresholdBlackLine;
-
+int blackLineWidth = 0;
 bool blackLineFound(void)
 {
     TimerDisable(TIMER2_BASE, TIMER_A);
@@ -166,16 +166,27 @@ bool blackLineFound(void)
 
     //thresholding value
     thresholdBlackLine = finalLine - initialLine;
-
     //threshold action
-    UARTprintf("thresholding black line value : %u\n",thresholdBlackLine);
-
+    if(thresholdBlackLine!= 0){
+            blackLineWidth++;
+            UARTprintf("thresholding black line value : %u\n",thresholdBlackLine);
+        }
+    if(thresholdBlackLine == 0){
+        blackLineWidth = 0;
+    }
+    if (blackLineWidth >5){
+        PWMStop();
+    }
+    if (blackLineWidth > 2){
+        UARTprintf("Passed blackLine\n");
+    }
     // clearing out values after black line detection
     previousTimeRead = time;
     if(previousTimeRead == 0 && time == 0){
         initialLine = 0;
         finalLine = 0;
         thresholdBlackLine = 0;
+        blackLineWidth = 0;
     }
     TimerDisable(TIMER0_BASE, TIMER_BOTH);
     SysCtlDelay(100);
