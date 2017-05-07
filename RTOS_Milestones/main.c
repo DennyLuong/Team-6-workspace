@@ -39,6 +39,7 @@
 #include "utils/uartstdio.c"
 #include "string.h"
 
+
 /********************************************************************************************************
  *                                     ADC get_adc_value Functions                                      *
  ********************************************************************************************************/
@@ -109,27 +110,25 @@ void PWMUserSetSpeed(void){
  *                                          Double Buffer                                               *
  ********************************************************************************************************/
 
-char distanceBuffer[20];
-char distanceBuffer2[20];
-int distanceBufferCount = 0;
+char distanceBufferA[20];
+char distanceBufferB[20];
+int distanceBufferACount = 0;
+int distanceBufferBCount = 0;
+int bufferSelect = 0;
 
-void swap(char * buffer1 , char * buffer2 ){
-	char * temp = buffer1;
-	buffer1 = buffer2;
-	buffer2 = temp;
-}
-
-
-void printBufferPing() {
+void printBuffer() {
+	int i;
 	while(1) {
-		Semaphore_pend(buffSem, BIOS_WAIT_FOREVER);
-
-		for(distanceBufferCount = 0 ; distanceBufferCount <20 ; distanceBufferCount++){
-			UARTprintf("%d", distanceBuffer[distanceBufferCount]);
+		Semaphore_pend(printBufferSem, BIOS_WAIT_FOREVER);
+		for(i = 0 ; i < 20 ; i++){
+			if (bufferSelect == 0) {
+				UARTprintf("%d", distanceBufferB[i]);
+			}
+			else if (bufferSelect == 1) {
+				UARTprintf("%d", distanceBufferA[i]);
+			}
 			UARTprintf("\n");
 		}
-		swap(distanceBuffer, distanceBuffer2);
-		distanceBufferCount = 0;
 	}
 }
 
@@ -137,13 +136,23 @@ void printBufferPing() {
 bool bufferFull = false;
 
 void distanceBufferLog(int ErrorValue){
-	if(distanceBufferCount != 20){
-		distanceBuffer[distanceBufferCount] = ErrorValue;
-		distanceBufferCount++;
+	if(distanceBufferACount < 20 && bufferSelect == 0){
+		distanceBufferA[distanceBufferACount] = ErrorValue;
+		distanceBufferACount++;
 	}
-	else{
-		UARTprintf("post semaphore \n");
-		Semaphore_post(buffSem);
+	else if (distanceBufferBCount < 20 && bufferSelect == 1) {
+		distanceBufferB[distanceBufferBCount] = ErrorValue;
+		distanceBufferBCount++;
+	}
+	else if (distanceBufferACount == 20 && bufferSelect == 0) {
+		distanceBufferACount = 0;
+		bufferSelect = 1;
+		Semaphore_post(printBufferSem);
+	}
+	else if (distanceBufferBCount == 20 && bufferSelect == 1) {
+		distanceBufferBCount = 0;
+		bufferSelect = 0;
+		Semaphore_post(printBufferSem);
 	}
 }
 
@@ -192,8 +201,7 @@ void blackLineFound(void)
 	if (blackLineWidth >5){
 		PWMStop();
 	}
-	if (blackLineWidth > 3){
-		UARTprintf("width>3\n");
+	if (blackLineWidth > 2){
 		lineDetectToggle = !(lineDetectToggle);
 	}
 	// clearing out values after black line detection
@@ -234,9 +242,9 @@ int power_difference = 0;
 
 
 int computePID(void){
-	//	if(blackLineFound()){
-	//		lineDetectToggle = !(lineDetectToggle);
-	//	}
+//	if(blackLineFound()){
+//		lineDetectToggle = !(lineDetectToggle);
+//	}
 	blackLineFound();
 	// PID calculations
 	cur_pos = rightDistance();
@@ -247,10 +255,10 @@ int computePID(void){
 
 	power_difference = proportional/p_const + derivative * d_const + integral/i_const;
 
-	if(lineDetectToggle && dataCollectionToggle){
+	if(lineDetectToggle){
+//		UARTprintf("lineDetectToggle value %d", lineDetectToggle);
 		distanceBufferLog(power_difference);
 	}
-	dataCollectionToggle = 1 - dataCollectionToggle; // or dataCollectionToggle = !dataCollectionToggle;
 
 	if (power_difference > max){
 		power_difference = max;}
@@ -294,6 +302,23 @@ int computePID(void){
 void Timer2IntHandler(void) {
 	TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 	Swi_post(PIDswi);
+}
+
+/********************************************************************************************************
+ *                                    LED Sequence Start                                                *
+ ********************************************************************************************************/
+
+void LEDSequenceInit(void) {
+	while(1) {
+		Semaphore_post(LEDSeq);
+	}
+}
+
+void LEDSequenceStart(void) {
+	while (1) {
+		Semaphore_pend(LEDSeq, BIOS_WAIT_FOREVER);
+		UARTprintf("Hello");
+	}
 }
 
 /********************************************************************************************************
@@ -416,6 +441,7 @@ void getFunction(char function){
 		PIDStart();
 		break;
 	case BL:
+		LEDSequenceInit();
 		break;
 	default:
 		UARTprintf("Error \n");
