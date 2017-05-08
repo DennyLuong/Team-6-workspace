@@ -164,6 +164,8 @@ uint32_t previousTimeRead = 0;
 uint32_t initialTime, initialLine, finalLine, thresholdBlackLine;
 int blackLineWidth = 0;
 bool lineDetectToggle = 0;
+bool finishLineDetected = false;
+
 void blackLineFound(void)
 {
 	TimerDisable(TIMER2_BASE, TIMER_A);
@@ -199,6 +201,7 @@ void blackLineFound(void)
 		blackLineWidth = 0;
 	}
 	if (blackLineWidth >5){
+		finishLineDetected = true;
 		PWMStop();
 	}
 	if (blackLineWidth > 2){
@@ -255,7 +258,7 @@ int computePID(void){
 
 	power_difference = proportional/p_const + derivative * d_const + integral/i_const;
 
-	if(lineDetectToggle){
+	if(lineDetectToggle && !finishLineDetected){
 //		UARTprintf("lineDetectToggle value %d", lineDetectToggle);
 		distanceBufferLog(power_difference);
 	}
