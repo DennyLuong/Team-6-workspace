@@ -200,7 +200,7 @@ void blackLineFound(void)
 	if(thresholdBlackLine == 0){
 		blackLineWidth = 0;
 	}
-	if (blackLineWidth >5){
+	if (blackLineWidth > 3){
 		finishLineDetected = true;
 		PWMStop();
 	}
