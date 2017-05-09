@@ -160,8 +160,7 @@ void distanceBufferLog(int ErrorValue){
  *                                       PID Control Functions                                          *
  ********************************************************************************************************/
 uint32_t time = 0;
-uint32_t previousTimeRead = 0;
-uint32_t initialTime, initialLine, finalLine, thresholdBlackLine;
+uint32_t initialTime, thresholdBlackLine;
 int blackLineWidth = 0;
 bool lineDetectToggle = 0;
 bool finishLineDetected = false;
@@ -181,47 +180,57 @@ void blackLineFound(void)
 	initialTime = TimerValueGet(TIMER0_BASE, TIMER_A);
 	while(GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_4) && GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_5)){};
 	time = TimerValueGet(TIMER0_BASE, TIMER_A) - initialTime;
+//	UARTprintf("Time difference : %u \n", time);
 
-	//white noise handle
-	if(time < 400){
-		time = 0;
-	}
-	//first detection of black line
-	if(time - previousTimeRead > 0 && initialLine == 0)
-		initialLine = time;
-
-	//detection of black line decreasing
-	if(time - previousTimeRead < 0)
-		finalLine = time;
-
-	//thresholding value
-	thresholdBlackLine = finalLine - initialLine;
-//	UARTprintf("Threshold black line: %u\n", thresholdBlackLine);
-
-	//threshold action
-	if(thresholdBlackLine!= 0){
-		blackLineWidth++;
-//		UARTprintf("Black line width: %d\n", blackLineWidth);
-	}
-	if(thresholdBlackLine == 0){
-		blackLineWidth = 0;
-	}
-	if (blackLineWidth > 3){
+	if (time > 9000) {
 		finishLineDetected = true;
 		PWMStop();
 	}
-	if (blackLineWidth > 2){
-		UARTprintf("Black line found");
+
+	else if (time > 7000) {
 		lineDetectToggle = !(lineDetectToggle);
 	}
-	// clearing out values after black line detection
-	previousTimeRead = time;
-	if(previousTimeRead == 0 && time == 0){
-		initialLine = 0;
-		finalLine = 0;
-		thresholdBlackLine = 0;
-		blackLineWidth = 0;
-	}
+//
+//	//white noise handle
+//	if(time < 400){
+//		time = 0;
+//	}
+//	//first detection of black line
+//	if(time - previousTimeRead > 0 && initialLine == 0)
+//		initialLine = time;
+//
+//	//detection of black line decreasing
+//	if(time - previousTimeRead < 0)
+//		finalLine = time;
+//
+//	//thresholding value
+//	thresholdBlackLine = finalLine - initialLine;
+////	UARTprintf("Threshold black line: %u\n", thresholdBlackLine);
+//
+//	//threshold action
+//	if(thresholdBlackLine!= 0){
+//		blackLineWidth++;
+////		UARTprintf("Black line width: %d\n", blackLineWidth);
+//	}
+//	if(thresholdBlackLine == 0){
+//		blackLineWidth = 0;
+//	}
+//	if (blackLineWidth > 3){
+//		finishLineDetected = true;
+//		PWMStop();
+//	}
+//	if (blackLineWidth > 2){
+//		UARTprintf("Black line found");
+//		lineDetectToggle = !(lineDetectToggle);
+//	}
+//	// clearing out values after black line detection
+//	previousTimeRead = time;
+//	if(previousTimeRead == 0 && time == 0){
+//		initialLine = 0;
+//		finalLine = 0;
+//		thresholdBlackLine = 0;
+//		blackLineWidth = 0;
+//	}
 	TimerDisable(TIMER0_BASE, TIMER_BOTH);
 	SysCtlDelay(100);
 	TimerEnable(TIMER2_BASE, TIMER_A);
