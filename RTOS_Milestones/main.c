@@ -171,12 +171,15 @@ void blackLineFound(void)
 	TimerDisable(TIMER2_BASE, TIMER_A);
 	SysCtlDelay(100);
 	TimerEnable(TIMER0_BASE,TIMER_BOTH);
-	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4 );
-	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4  , GPIO_PIN_4  );
+	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_4);
+	GPIOPinTypeGPIOOutput(GPIO_PORTE_BASE, GPIO_PIN_5);
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_4, GPIO_PIN_4);
+	GPIOPinWrite(GPIO_PORTE_BASE, GPIO_PIN_5, GPIO_PIN_5);
 	SysCtlDelay(100);
-	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4  );
+	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_4);
+	GPIOPinTypeGPIOInput(GPIO_PORTE_BASE, GPIO_PIN_5);
 	initialTime = TimerValueGet(TIMER0_BASE, TIMER_A);
-	while(GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_4)){};
+	while(GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_4) && GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_5)){};
 	time = TimerValueGet(TIMER0_BASE, TIMER_A) - initialTime;
 
 	//white noise handle
@@ -193,9 +196,12 @@ void blackLineFound(void)
 
 	//thresholding value
 	thresholdBlackLine = finalLine - initialLine;
+//	UARTprintf("Threshold black line: %u\n", thresholdBlackLine);
+
 	//threshold action
 	if(thresholdBlackLine!= 0){
 		blackLineWidth++;
+//		UARTprintf("Black line width: %d\n", blackLineWidth);
 	}
 	if(thresholdBlackLine == 0){
 		blackLineWidth = 0;
@@ -205,6 +211,7 @@ void blackLineFound(void)
 		PWMStop();
 	}
 	if (blackLineWidth > 2){
+		UARTprintf("Black line found");
 		lineDetectToggle = !(lineDetectToggle);
 	}
 	// clearing out values after black line detection
@@ -305,23 +312,6 @@ int computePID(void){
 void Timer2IntHandler(void) {
 	TimerIntClear(TIMER2_BASE, TIMER_TIMA_TIMEOUT);
 	Swi_post(PIDswi);
-}
-
-/********************************************************************************************************
- *                                    LED Sequence Start                                                *
- ********************************************************************************************************/
-
-void LEDSequenceInit(void) {
-	while(1) {
-		Semaphore_post(LEDSeq);
-	}
-}
-
-void LEDSequenceStart(void) {
-	while (1) {
-		Semaphore_pend(LEDSeq, BIOS_WAIT_FOREVER);
-		UARTprintf("Hello");
-	}
 }
 
 /********************************************************************************************************
@@ -444,7 +434,6 @@ void getFunction(char function){
 		PIDStart();
 		break;
 	case BL:
-		LEDSequenceInit();
 		break;
 	default:
 		UARTprintf("Error \n");
