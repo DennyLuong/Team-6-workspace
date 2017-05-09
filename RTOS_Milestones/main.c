@@ -162,7 +162,7 @@ void distanceBufferLog(int ErrorValue){
 uint32_t time = 0;
 uint32_t initialTime, thresholdBlackLine;
 int blackLineWidth = 0;
-bool lineDetectToggle = 0;
+int lineDetectToggle = 0;
 bool finishLineDetected = false;
 
 void blackLineFound(void)
@@ -188,7 +188,7 @@ void blackLineFound(void)
 	}
 
 	else if (time > 7000) {
-		lineDetectToggle = !(lineDetectToggle);
+		lineDetectToggle++;
 	}
 //
 //	//white noise handle
@@ -274,7 +274,7 @@ int computePID(void){
 
 	power_difference = proportional/p_const + derivative * d_const + integral/i_const;
 
-	if(lineDetectToggle && !finishLineDetected){
+	if(lineDetectToggle == 1 && !finishLineDetected){
 //		UARTprintf("lineDetectToggle value %d", lineDetectToggle);
 		distanceBufferLog(power_difference);
 	}
