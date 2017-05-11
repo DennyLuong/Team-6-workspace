@@ -13,9 +13,9 @@
 //----------------------------------------
 // BIOS header files
 //----------------------------------------
-#include <xdc/std.h>  						//mandatory - have to include first, for BIOS types
-#include <ti/sysbios/BIOS.h> 				//mandatory - if you call APIs like BIOS_start()
-#include <xdc/runtime/Log.h>				//needed for any Log_info() call
+#include <xdc/std.h>  						
+#include <ti/sysbios/BIOS.h> 				
+#include <xdc/runtime/Log.h>				
 #include <xdc/cfg/global.h>
 
 
@@ -180,57 +180,15 @@ void blackLineFound(void)
 	initialTime = TimerValueGet(TIMER0_BASE, TIMER_A);
 	while(GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_4) && GPIOPinRead(GPIO_PORTE_BASE,GPIO_PIN_5)){};
 	time = TimerValueGet(TIMER0_BASE, TIMER_A) - initialTime;
-//	UARTprintf("Time difference : %u \n", time);
-
-	if (time > 9000) {
+	
+	if (time > 9000) {  
 		finishLineDetected = true;
 		PWMStop();
 	}
-
 	else if (time > 7000) {
 		lineDetectToggle++;
 	}
-//
-//	//white noise handle
-//	if(time < 400){
-//		time = 0;
-//	}
-//	//first detection of black line
-//	if(time - previousTimeRead > 0 && initialLine == 0)
-//		initialLine = time;
-//
-//	//detection of black line decreasing
-//	if(time - previousTimeRead < 0)
-//		finalLine = time;
-//
-//	//thresholding value
-//	thresholdBlackLine = finalLine - initialLine;
-////	UARTprintf("Threshold black line: %u\n", thresholdBlackLine);
-//
-//	//threshold action
-//	if(thresholdBlackLine!= 0){
-//		blackLineWidth++;
-////		UARTprintf("Black line width: %d\n", blackLineWidth);
-//	}
-//	if(thresholdBlackLine == 0){
-//		blackLineWidth = 0;
-//	}
-//	if (blackLineWidth > 3){
-//		finishLineDetected = true;
-//		PWMStop();
-//	}
-//	if (blackLineWidth > 2){
-//		UARTprintf("Black line found");
-//		lineDetectToggle = !(lineDetectToggle);
-//	}
-//	// clearing out values after black line detection
-//	previousTimeRead = time;
-//	if(previousTimeRead == 0 && time == 0){
-//		initialLine = 0;
-//		finalLine = 0;
-//		thresholdBlackLine = 0;
-//		blackLineWidth = 0;
-//	}
+
 	TimerDisable(TIMER0_BASE, TIMER_BOTH);
 	SysCtlDelay(100);
 	TimerEnable(TIMER2_BASE, TIMER_A);
@@ -261,9 +219,6 @@ int power_difference = 0;
 
 
 int computePID(void){
-//	if(blackLineFound()){
-//		lineDetectToggle = !(lineDetectToggle);
-//	}
 	blackLineFound();
 	// PID calculations
 	cur_pos = rightDistance();
@@ -275,7 +230,6 @@ int computePID(void){
 	power_difference = proportional/p_const + derivative * d_const + integral/i_const;
 
 	if(lineDetectToggle == 1 && !finishLineDetected){
-//		UARTprintf("lineDetectToggle value %d", lineDetectToggle);
 		distanceBufferLog(power_difference);
 	}
 
@@ -283,8 +237,6 @@ int computePID(void){
 		power_difference = max;}
 	if (power_difference < -max){
 		power_difference = -max;}
-
-	//	UARTprintf("Power Difference: %d\n",power_difference);
 
 	if(power_difference < 0){
 		PWMSetSpeed(max, 101 + power_difference);
